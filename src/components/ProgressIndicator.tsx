@@ -44,7 +44,7 @@ export function ProgressIndicator({ projectId }: ProgressIndicatorProps) {
                     isCompleted
                       ? "bg-green-500 text-white"
                       : isActive
-                        ? "bg-blue-500 text-white ring-4 ring-blue-100"
+                        ? "bg-[#65195E] text-white ring-4 ring-[#C246C6]/20"
                         : "bg-gray-200 text-gray-400"
                   }`}
                 >
@@ -69,7 +69,7 @@ export function ProgressIndicator({ projectId }: ProgressIndicatorProps) {
                 <span
                   className={`mt-1.5 text-center text-[10px] leading-tight sm:text-xs ${
                     isActive
-                      ? "font-semibold text-blue-600"
+                      ? "font-semibold text-[#65195E]"
                       : isCompleted
                         ? "font-medium text-green-600"
                         : "text-gray-400"

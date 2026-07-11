@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase";
+import { verifySession, unauthorizedResponse } from "@/lib/session";
 
 /**
  * PATCH /api/projects/[id]/progress
@@ -11,6 +12,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authHeader = request.headers.get("Authorization");
+    const { user } = await verifySession(authHeader).catch(() => {
+      throw new Error("unauthorized");
+    });
+
     const { id } = await params;
 
     // Validasi format UUID
@@ -35,6 +41,27 @@ export async function PATCH(
 
     const supabase = createSupabaseServerClient();
 
+    // Verifikasi kepemilikan proyek sebelum update
+    const { data: existing, error: ownerCheckError } = await supabase
+      .from("projects")
+      .select("id, user_id")
+      .eq("id", id)
+      .single();
+
+    if (ownerCheckError || !existing) {
+      return NextResponse.json(
+        { error: "Proyek tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    if (existing.user_id !== user.id) {
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses ke proyek ini" },
+        { status: 403 }
+      );
+    }
+
     const { data: project, error } = await supabase
       .from("projects")
       .update({ progress_status: progress_status.trim() })
@@ -58,7 +85,8 @@ export async function PATCH(
     }
 
     return NextResponse.json({ project }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "unauthorized") return unauthorizedResponse();
     console.error("Unexpected error updating progress:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },

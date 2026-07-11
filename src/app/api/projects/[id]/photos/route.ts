@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase";
+import { verifySession, unauthorizedResponse } from "@/lib/session";
 
 /**
  * GET /api/projects/[id]/photos
@@ -8,10 +9,15 @@ import { createSupabaseServerClient } from "@/lib/supabase";
  * Foto diurutkan berdasarkan waktu pembuatan (terbaru dulu).
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authHeader = request.headers.get("Authorization");
+    const { user } = await verifySession(authHeader).catch(() => {
+      throw new Error("unauthorized");
+    });
+
     const { id } = await params;
 
     // Validasi format UUID
@@ -25,6 +31,27 @@ export async function GET(
     }
 
     const supabase = createSupabaseServerClient();
+
+    // Verifikasi kepemilikan proyek
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, user_id")
+      .eq("id", id)
+      .single();
+
+    if (projectError || !project) {
+      return NextResponse.json(
+        { error: "Proyek tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    if (project.user_id !== user.id) {
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses ke proyek ini" },
+        { status: 403 }
+      );
+    }
 
     const { data: photos, error } = await supabase
       .from("photos")
@@ -43,7 +70,8 @@ export async function GET(
     }
 
     return NextResponse.json({ photos }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "unauthorized") return unauthorizedResponse();
     console.error("Unexpected error fetching photos:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },

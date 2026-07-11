@@ -55,9 +55,9 @@ function getStatusBadge(status: string) {
 
 // Progress bar color based on percent
 function getProgressColor(percent: number): string {
-  if (percent >= 100) return "bg-emerald-500";
-  if (percent >= 60) return "bg-blue-500";
-  if (percent >= 30) return "bg-amber-400";
+  if (percent >= 100) return "bg-[#65195E]";
+  if (percent >= 60) return "bg-[#91157E]";
+  if (percent >= 30) return "bg-[#C246C6]";
   return "bg-gray-300";
 }
 
@@ -66,22 +66,20 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const progressColor = getProgressColor(project.progress_percent);
 
   return (
-    <div className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-200 hover:border-gray-200 hover:shadow-md">
+    <div className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-lg">
       {/* Thumbnail + Status Badge */}
       <div className="relative h-40 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
         {/* Placeholder thumbnail pattern */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <svg className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-          </svg>
+        <div className="absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
+          <i className="ri-image-line text-5xl text-gray-300 transition-colors duration-300 group-hover:text-gray-400" />
         </div>
 
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity group-hover:opacity-100" />
+        <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
         {/* Status Badge */}
         <span
-          className={`absolute right-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badge.className}`}
+          className={`absolute right-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-all duration-300 shadow-sm group-hover:scale-105 ${badge.className}`}
         >
           {badge.label}
         </span>
@@ -90,29 +88,25 @@ export function ProjectCard({ project }: ProjectCardProps) {
       {/* Card Body */}
       <div className="p-5">
         {/* Title + Event Type */}
-        <h3 className="text-sm font-bold text-gray-900 truncate">
+        <h3 className="text-sm font-bold text-gray-900 truncate transition-colors duration-200 group-hover:text-black">
           {project.name}
         </h3>
         <p className="mt-0.5 text-xs text-gray-400">{project.event_type}</p>
 
         {/* Client slug */}
-        <p className="mt-2 text-[10px] text-gray-300 font-mono">
+        <p className="mt-2 text-[10px] text-gray-300 font-mono transition-colors duration-200 group-hover:text-gray-400">
           /{project.unique_slug}
         </p>
 
         {/* Info badges row */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-semibold text-gray-600">
-            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
+          <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-semibold text-gray-600 transition-colors duration-200 group-hover:bg-gray-200">
+            <i className="ri-check-line text-xs" />
             {project.favorite_count} Dipilih
           </span>
           {project.revision_count > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-600">
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.181-3.182" />
-              </svg>
+            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-600 transition-colors duration-200 group-hover:bg-orange-100">
+              <i className="ri-refresh-line text-xs" />
               {project.revision_count} Revisi
             </span>
           )}
@@ -136,25 +130,18 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <div className="mt-4 flex items-center justify-between border-t border-gray-50 pt-4">
           <div className="flex items-center gap-3">
             {/* Foto count */}
-            <div className="flex items-center gap-1 text-gray-400">
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+            <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
+              <i className="ri-camera-3-line text-sm" />
               <span className="text-[10px] font-semibold">{project.photo_count}</span>
             </div>
             {/* Favorite count */}
-            <div className="flex items-center gap-1 text-gray-400">
-              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-              </svg>
+            <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
+              <i className="ri-heart-fill text-sm" />
               <span className="text-[10px] font-semibold">{project.favorite_count}</span>
             </div>
             {/* Revision count */}
-            <div className="flex items-center gap-1 text-gray-400">
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.181-3.182" />
-              </svg>
+            <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
+              <i className="ri-refresh-line text-sm" />
               <span className="text-[10px] font-semibold">{project.revision_count}</span>
             </div>
           </div>
@@ -162,12 +149,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
           {/* Detail link */}
           <Link
             href={`/${project.unique_slug}`}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-400 transition-colors hover:bg-[#1E1E1E] hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-400 transition-all duration-300 hover:bg-[#65195E] hover:text-white hover:scale-110 active:scale-95"
             title="Lihat detail proyek"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-            </svg>
+            <i className="ri-arrow-right-line text-base" />
           </Link>
         </div>
       </div>

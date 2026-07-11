@@ -94,9 +94,7 @@ export function CreateProjectModal({
             onClick={onClose}
             className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <i className="ri-close-line text-lg" />
           </button>
         </div>
 
@@ -116,7 +114,7 @@ export function CreateProjectModal({
               value={form.name}
               onChange={handleChange}
               placeholder="Contoh: Prewedding Andi & Budi"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition-all duration-300 hover:border-gray-300 focus:border-[#65195E] focus:ring-1 focus:ring-[#65195E]"
             />
           </div>
 
@@ -128,7 +126,7 @@ export function CreateProjectModal({
               name="event_type"
               value={form.event_type}
               onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition-all duration-300 hover:border-gray-300 focus:border-[#65195E] focus:ring-1 focus:ring-[#65195E] cursor-pointer"
             >
               <option value="">Pilih jenis acara</option>
               <option>Wedding</option>
@@ -150,7 +148,7 @@ export function CreateProjectModal({
               onChange={handleChange}
               rows={3}
               placeholder="Catatan atau deskripsi proyek..."
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition-all duration-300 hover:border-gray-300 focus:border-[#65195E] focus:ring-1 focus:ring-[#65195E]"
             />
           </div>
 
@@ -165,7 +163,7 @@ export function CreateProjectModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:bg-blue-400"
+              className="flex-1 rounded-lg bg-[#65195E] py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] hover:bg-[#91157E] hover:shadow-md active:scale-[0.98] disabled:bg-gray-400"
             >
               {isSubmitting ? "Menyimpan…" : "Buat Proyek"}
             </button>

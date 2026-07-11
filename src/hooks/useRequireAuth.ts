@@ -1,23 +1,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const AUTH_STORAGE_KEY = "cgp.auth.user";
-
 /**
  * Hook proteksi route — redirect ke /login jika user belum login.
- * Stub: mengecek localStorage (akan diganti Supabase session check).
- *
- * Returns `true` saat user terautentikasi, `false` saat sedang redirect.
+ * Mengecek token Supabase di localStorage.
+ * 
+ * Returns `true` saat user terautentikasi (memiliki token), `false` saat sedang redirect.
  */
 export function useRequireAuth(): boolean {
   const router = useRouter();
   const [isAuthed, setIsAuthed] = useState(false);
 
   useEffect(() => {
-    // Cek apakah user "login" (stub: key ada di localStorage)
+    // Cek apakah user login (memiliki token)
     const token =
       typeof window !== "undefined"
-        ? localStorage.getItem(AUTH_STORAGE_KEY)
+        ? localStorage.getItem("sb-access-token")
         : null;
 
     if (!token) {
@@ -28,17 +26,4 @@ export function useRequireAuth(): boolean {
   }, [router]);
 
   return isAuthed;
-}
-
-/**
- * Helper untuk "login" secara stub — set key di localStorage.
- * Dipanggil dari halaman login/signup setelah submit berhasil.
- */
-export function setStubAuth(email: string): void {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(
-      AUTH_STORAGE_KEY,
-      JSON.stringify({ email, loggedInAt: new Date().toISOString() })
-    );
-  }
 }

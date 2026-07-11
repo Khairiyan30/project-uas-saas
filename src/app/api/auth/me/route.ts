@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifySession, unauthorizedResponse } from "@/lib/session";
 
-function getSupabase(useServiceRole = false) {
+/**
+ * Buat Supabase client yang mengenali user yang sedang login (authenticated).
+ * Ini penting agar RLS policy seperti `auth.uid() = id` bisa bekerja.
+ */
+function createAuthedSupabase(token: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = useServiceRole
-    ? process.env.SUPABASE_SERVICE_ROLE_KEY
-    : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error("Supabase env vars not configured");
-  return createClient(url, key);
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) throw new Error("Supabase env vars not configured");
+
+  return createClient(url, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
 }
 
 /**
@@ -17,29 +29,66 @@ function getSupabase(useServiceRole = false) {
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("Authorization");
-    const { user } = await verifySession(authHeader).catch(() => {
-      throw new Error("unauthorized");
-    });
 
-    const supabase = getSupabase();
-    const { data: profile, error } = await supabase
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Unauthorized: silakan login terlebih dahulu" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const supabase = createAuthedSupabase(token);
+
+    // Verifikasi token & dapatkan user
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      return NextResponse.json(
+        { error: "Token tidak valid atau sudah expired" },
+        { status: 401 }
+      );
+    }
+
+    const user = authData.user;
+
+    // Coba ambil profil
+    let { data: profile, error } = await supabase
       .from("profiles")
       .select("id, email, full_name, avatar_url, created_at")
       .eq("id", user.id)
       .single();
 
     if (error || !profile) {
-      return NextResponse.json(
-        { error: "Profil tidak ditemukan" },
-        { status: 404 }
-      );
+      // Fallback: Jika profile tidak ditemukan, buatkan otomatis
+      const fallbackName =
+        user.user_metadata?.full_name ||
+        user.email?.split("@")[0] ||
+        "User";
+
+      const { data: newProfile, error: insertError } = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          email: user.email,
+          full_name: fallbackName,
+          avatar_url: null,
+        })
+        .select("id, email, full_name, avatar_url, created_at")
+        .single();
+
+      if (insertError) {
+        console.error("Failed to auto-create profile:", insertError);
+        return NextResponse.json(
+          { error: "Profil tidak ditemukan dan gagal dibuat", details: insertError.message },
+          { status: 404 }
+        );
+      }
+
+      profile = newProfile;
     }
 
     return NextResponse.json({ user: profile }, { status: 200 });
   } catch (error: any) {
-    if (error.message === "unauthorized") {
-      return unauthorizedResponse();
-    }
     console.error("Error fetching profile:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },
@@ -54,9 +103,25 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const authHeader = request.headers.get("Authorization");
-    const { user } = await verifySession(authHeader).catch(() => {
-      throw new Error("unauthorized");
-    });
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Unauthorized: silakan login terlebih dahulu" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const supabase = createAuthedSupabase(token);
+
+    // Verifikasi token & dapatkan user
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      return NextResponse.json(
+        { error: "Token tidak valid atau sudah expired" },
+        { status: 401 }
+      );
+    }
 
     const body = await request.json();
     const { full_name, avatar_url } = body;
@@ -82,12 +147,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabase(true);
-
     const { data: updated, error } = await supabase
       .from("profiles")
       .update(updateData)
-      .eq("id", user.id)
+      .eq("id", authData.user.id)
       .select("id, email, full_name, avatar_url")
       .single();
 
@@ -101,9 +164,6 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ user: updated }, { status: 200 });
   } catch (error: any) {
-    if (error.message === "unauthorized") {
-      return unauthorizedResponse();
-    }
     console.error("Error updating profile:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },

@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Client Gallery Pro</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Shootlink</h1>
           <p className="mt-2 text-sm text-gray-500">
             Pulihkan akses akun Anda
           </p>
@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
               </p>
               <Link
                 href="/login"
-                className="mt-4 inline-block text-sm font-medium text-blue-600 hover:text-blue-700"
+                className="mt-4 inline-block text-sm font-medium text-[#65195E] hover:underline"
               >
                 Kembali ke halaman masuk
               </Link>
@@ -90,14 +90,14 @@ export default function ForgotPasswordPage() {
                       setEmail(e.target.value);
                       setError("");
                     }}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-300 outline-none transition-all duration-300 hover:border-gray-300 focus:border-[#65195E] focus:ring-1 focus:ring-[#65195E]"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="mt-2 w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+                  className="mt-2 w-full rounded-lg bg-[#65195E] py-2.5 text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02] hover:bg-[#91157E] hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
                   {isLoading ? "Mengirim…" : "Kirim Tautan Reset"}
                 </button>
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
           )}
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-700">
+            <Link href="/login" className="font-bold text-[#65195E] hover:underline">
               Kembali ke halaman masuk
             </Link>
           </p>

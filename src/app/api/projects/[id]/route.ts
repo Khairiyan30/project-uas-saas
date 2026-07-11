@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase";
+import { verifySession, unauthorizedResponse } from "@/lib/session";
 
 /**
  * GET /api/projects/[id]
@@ -7,10 +8,15 @@ import { createSupabaseServerClient } from "@/lib/supabase";
  * Mengambil detail proyek termasuk unique_slug untuk galeri publik.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authHeader = request.headers.get("Authorization");
+    const { user } = await verifySession(authHeader).catch(() => {
+      throw new Error("unauthorized");
+    });
+
     const { id } = await params;
 
     // Validasi format UUID
@@ -48,8 +54,17 @@ export async function GET(
       );
     }
 
+    // Pastikan user yang login adalah pemilik proyek
+    if (project.user_id !== user.id) {
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses ke proyek ini" },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({ project }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "unauthorized") return unauthorizedResponse();
     console.error("Unexpected error fetching project:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },
@@ -68,6 +83,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authHeader = request.headers.get("Authorization");
+    const { user } = await verifySession(authHeader).catch(() => {
+      throw new Error("unauthorized");
+    });
+
     const { id } = await params;
 
     // Validasi format UUID
@@ -123,6 +143,27 @@ export async function PUT(
 
     const supabase = createSupabaseServerClient();
 
+    // Verifikasi kepemilikan proyek sebelum update
+    const { data: existing, error: ownerCheckError } = await supabase
+      .from("projects")
+      .select("id, user_id")
+      .eq("id", id)
+      .single();
+
+    if (ownerCheckError || !existing) {
+      return NextResponse.json(
+        { error: "Proyek tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    if (existing.user_id !== user.id) {
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses ke proyek ini" },
+        { status: 403 }
+      );
+    }
+
     const { data: project, error } = await supabase
       .from("projects")
       .update(updateData)
@@ -146,7 +187,8 @@ export async function PUT(
     }
 
     return NextResponse.json({ project }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "unauthorized") return unauthorizedResponse();
     console.error("Unexpected error updating project:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },
