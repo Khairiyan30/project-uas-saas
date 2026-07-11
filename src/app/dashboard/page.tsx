@@ -78,7 +78,7 @@ export default function DashboardPage() {
             <div className="group rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-md">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F8F8F8] text-[#65195E] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
-                  <i className="ri-folder-line text-xl"></i>
+                  <div className="h-6 w-6 bg-current" style={{ maskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Document/folders-line.svg)', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Document/folders-line.svg)', WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center' }} />
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-400">Total Proyek</p>
@@ -104,7 +104,7 @@ export default function DashboardPage() {
             <div className="group rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-md">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F8F8F8] text-[#91157E] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
-                  <i className="ri-camera-3-line text-xl"></i>
+                  <div className="h-6 w-6 bg-current" style={{ maskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Media/camera-4-line.svg)', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Media/camera-4-line.svg)', WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center' }} />
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-400">Total Foto</p>

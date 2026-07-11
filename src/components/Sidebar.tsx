@@ -21,7 +21,7 @@ export function Sidebar() {
     {
       name: "Proyek",
       href: "/proyek",
-      icon: <i className="ri-folder-line"></i>,
+      icon: <div className="h-5 w-5 bg-current" style={{ maskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Document/folders-line.svg)', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Document/folders-line.svg)', WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center' }} />,
     },
     {
       name: "Pengaturan",
