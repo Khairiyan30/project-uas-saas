@@ -42,7 +42,7 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <div className="lg:ml-64 min-h-screen">
-        <div className="mx-auto max-w-6xl px-4 py-4 pt-14 sm:px-8 sm:py-8 sm:pt-8">
+        <div className="mx-auto max-w-6xl px-4 py-4 pt-16 sm:px-8 sm:py-8 sm:pt-8">
           {/* Header */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">

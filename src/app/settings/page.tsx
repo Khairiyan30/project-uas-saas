@@ -188,7 +188,7 @@ export default function SettingsPage() {
       <Sidebar />
 
       <div className="lg:ml-64 min-h-screen">
-        <div className="mx-auto max-w-3xl px-4 py-4 pt-14 sm:px-8 sm:py-8 sm:pt-8">
+        <div className="mx-auto max-w-3xl px-4 py-4 pt-16 sm:px-8 sm:py-8 sm:pt-8">
           <h2 className="mb-2 text-2xl font-bold tracking-tight text-gray-900">
             Pengaturan
           </h2>
