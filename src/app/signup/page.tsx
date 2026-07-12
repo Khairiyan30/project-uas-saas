@@ -67,7 +67,7 @@ export default function SignUpPage() {
       }
 
       if (data.session?.access_token) {
-        await authLogin(data.session.access_token);
+        await authLogin(data.session.access_token, data.session.refresh_token);
         router.push("/dashboard");
       } else {
         router.push("/login?registered=true");

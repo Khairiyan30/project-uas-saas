@@ -5,23 +5,26 @@ import { getSupabaseClient } from "@/lib/supabase";
 
 /**
  * Hook untuk subscribe ke perubahan progress_status pada proyek.
- * Mengembalikan status terkini secara real-time via Supabase Realtime.
+ * @param projectId - ID proyek
+ * @param initialStatus - Status awal dari props parent (optional)
  */
-export function useProjectRealtime(projectId: string) {
-  const [status, setStatus] = useState<string>("");
+export function useProjectRealtime(projectId: string, initialStatus?: string) {
+  const [status, setStatus] = useState<string>(initialStatus ?? "");
 
   useEffect(() => {
     const supabase = getSupabaseClient();
 
-    // Initial fetch
-    supabase
-      .from("projects")
-      .select("progress_status")
-      .eq("id", projectId)
-      .single()
-      .then(({ data, error }) => {
-        if (!error && data) setStatus(data.progress_status);
-      });
+    // Initial fetch (sebagai fallback jika initialStatus tidak diberikan)
+    if (!initialStatus) {
+      supabase
+        .from("projects")
+        .select("progress_status")
+        .eq("id", projectId)
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) setStatus(data.progress_status);
+        });
+    }
 
     // Subscribe to realtime updates
     const channel = supabase
@@ -44,7 +47,12 @@ export function useProjectRealtime(projectId: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [projectId]);
+  }, [projectId, initialStatus]);
+
+  // Update status jika initialStatus berubah dari parent
+  useEffect(() => {
+    if (initialStatus) setStatus(initialStatus);
+  }, [initialStatus]);
 
   return status;
 }

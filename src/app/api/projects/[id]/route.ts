@@ -196,3 +196,99 @@ export async function PUT(
     );
   }
 }
+
+/**
+ * DELETE /api/projects/[id]
+ *
+ * Menghapus proyek beserta semua foto di dalamnya.
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authHeader = request.headers.get("Authorization");
+    const { user } = await verifySession(authHeader).catch(() => {
+      throw new Error("unauthorized");
+    });
+
+    const { id } = await params;
+
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json(
+        { error: "Format ID proyek tidak valid" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createSupabaseServerClient();
+
+    // Verifikasi kepemilikan
+    const { data: existing, error: fetchError } = await supabase
+      .from("projects")
+      .select("id, user_id")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !existing) {
+      return NextResponse.json(
+        { error: "Proyek tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    if (existing.user_id !== user.id) {
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses ke proyek ini" },
+        { status: 403 }
+      );
+    }
+
+    // Hapus semua foto dari storage dulu
+    const { data: photos } = await supabase
+      .from("photos")
+      .select("url_original, url_edited")
+      .eq("project_id", id);
+
+    if (photos) {
+      for (const photo of photos) {
+        const paths: string[] = [];
+        const origPath = photo.url_original?.split("/storage/v1/object/public/photos/")[1];
+        if (origPath) paths.push(origPath);
+        const editPath = photo.url_edited?.split("/storage/v1/object/public/photos/")[1];
+        if (editPath) paths.push(editPath);
+        if (paths.length > 0) {
+          await supabase.storage.from("photos").remove(paths);
+        }
+      }
+    }
+
+    // Hapus dari DB (photos cascade, lalu projects)
+    const { error: deleteError } = await supabase
+      .from("projects")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("Error deleting project:", deleteError);
+      return NextResponse.json(
+        { error: "Gagal menghapus proyek" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Proyek berhasil dihapus" },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    if (error.message === "unauthorized") return unauthorizedResponse();
+    console.error("Unexpected error deleting project:", error);
+    return NextResponse.json(
+      { error: "Terjadi kesalahan server" },
+      { status: 500 }
+    );
+  }
+}

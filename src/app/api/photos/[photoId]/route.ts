@@ -45,10 +45,10 @@ export async function DELETE(
       );
     }
 
-    // Ambil data proyek untuk verifikasi owner
+    // Ambil data proyek untuk verifikasi owner & cek cover
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, user_id")
+      .select("id, user_id, cover_photo_url")
       .eq("id", photo.project_id)
       .single();
 
@@ -101,6 +101,19 @@ export async function DELETE(
         { error: "Gagal menghapus metadata foto dari database" },
         { status: 500 }
       );
+    }
+
+    // 4. Jika foto ini adalah cover proyek, hapus cover
+    if (project.cover_photo_url && project.cover_photo_url === photo.url_original) {
+      const { error: coverClearError } = await supabase
+        .from("projects")
+        .update({ cover_photo_url: null })
+        .eq("id", photo.project_id);
+
+      if (coverClearError) {
+        console.error("Error clearing cover photo:", coverClearError);
+        // Tidak return error, foto tetap terhapus
+      }
     }
 
     return NextResponse.json(

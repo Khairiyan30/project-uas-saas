@@ -6,6 +6,7 @@ import { verifySession, unauthorizedResponse } from "@/lib/session";
  * GET /api/projects
  *
  * Mengambil daftar semua proyek milik user yang sedang login.
+ * Termasuk total foto dan jumlah favorit per proyek.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +31,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ projects: projects ?? [] }, { status: 200 });
+    // Ambil aggregate counts foto per proyek (total + favorit)
+    const projectIds = (projects ?? []).map((p) => p.id);
+    const photoCountMap: Record<string, number> = {};
+    const favCountMap: Record<string, number> = {};
+
+    if (projectIds.length > 0) {
+      const { data: allPhotos } = await supabase
+        .from("photos")
+        .select("project_id, is_favorite")
+        .in("project_id", projectIds);
+
+      for (const photo of allPhotos ?? []) {
+        if (!photoCountMap[photo.project_id]) photoCountMap[photo.project_id] = 0;
+        photoCountMap[photo.project_id]++;
+        if (photo.is_favorite) {
+          if (!favCountMap[photo.project_id]) favCountMap[photo.project_id] = 0;
+          favCountMap[photo.project_id]++;
+        }
+      }
+    }
+
+    const result = (projects ?? []).map((p) => ({
+      ...p,
+      photo_count: photoCountMap[p.id] ?? 0,
+      favorite_count: favCountMap[p.id] ?? 0,
+    }));
+
+    return NextResponse.json({ projects: result }, { status: 200 });
   } catch (error: any) {
     if (error.message === "unauthorized") return unauthorizedResponse();
     console.error("Error fetching projects:", error);

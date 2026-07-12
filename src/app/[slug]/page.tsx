@@ -6,8 +6,9 @@ import Link from "next/link";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { PhotoCard } from "@/components/PhotoCard";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Project, Photo, UploadQueueItem } from "@/lib/types";
 
-const STEPS = ["Persiapan", "Uploading", "Proses Edit", "Menunggu Reviu", "Tahap Kurasi Klien", "Selesai"] as const;
+const STEPS = ["Persiapan", "Uploading", "Proses Edit", "Menunggu Review", "Tahap Kurasi Klien", "Selesai"] as const;
 
 export default function GalleryPage() {
   const params = useParams();
@@ -15,8 +16,8 @@ export default function GalleryPage() {
   const { user: loggedInUser } = useAuth();
   const slug = params.slug as string;
 
-  const [project, setProject] = useState<any>(null);
-  const [photos, setPhotos] = useState<any[]>([]);
+  const [project, setProject] = useState<Project | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -31,7 +32,7 @@ export default function GalleryPage() {
   const [isSavingDetail, setIsSavingDetail] = useState(false);
   
   // State untuk upload foto
-  const [uploadQueue, setUploadQueue] = useState<{ name: string; progress: number; status: "waiting" | "uploading" | "success" | "error" }[]>([]);
+  const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
@@ -97,9 +98,8 @@ export default function GalleryPage() {
       });
 
       const data = await res.json();
-      if (res.ok) {
-        setProject((prev: any) => ({ ...prev, progress_status: newStatus }));
-        // Refresh data
+      if (res.ok && project) {
+        setProject({ ...project, progress_status: newStatus });
         router.refresh();
       } else {
         alert(data.error || "Gagal mengubah status progres");
@@ -132,12 +132,12 @@ export default function GalleryPage() {
 
       const data = await res.json();
       if (res.ok && data.project) {
-        setProject((prev: any) => ({
+        setProject((prev) => prev ? {
           ...prev,
           name: data.project.name,
           event_type: data.project.event_type,
           description: data.project.description,
-        }));
+        } : prev);
         setIsEditing(false);
       } else {
         alert(data.error || "Gagal menyimpan detail proyek");
@@ -149,16 +149,32 @@ export default function GalleryPage() {
     }
   };
 
-  // Handle file upload
+  // Handle file upload dengan validasi client-side
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !project || !isAdmin) return;
+
+    const fileList = Array.from(files);
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+    const maxSize = 20 * 1024 * 1024; // 20MB
+
+    for (const file of fileList) {
+      if (!allowedTypes.includes(file.type)) {
+        setUploadError(`Tipe file "${file.type}" tidak didukung. Gunakan JPEG, PNG, WebP, atau AVIF.`);
+        e.target.value = "";
+        return;
+      }
+      if (file.size > maxSize) {
+        setUploadError(`File "${file.name}" terlalu besar (maks 20MB).`);
+        e.target.value = "";
+        return;
+      }
+    }
 
     setIsUploading(true);
     setUploadError("");
 
     const token = localStorage.getItem("sb-access-token");
-    const fileList = Array.from(files);
 
     // Siapkan upload queue state
     const newQueue = fileList.map(f => ({ name: f.name, progress: 0, status: "waiting" as const }));
@@ -243,9 +259,8 @@ export default function GalleryPage() {
       if (res.ok) {
         const deletedPhoto = photos.find(p => p.id === photoId);
         setPhotos(prev => prev.filter(p => p.id !== photoId));
-        // Jika foto yang dihapus adalah cover, hapus cover dari proyek
-        if (deletedPhoto && deletedPhoto.url_original === project.cover_photo_url) {
-          setProject((prev: any) => ({ ...prev, cover_photo_url: null }));
+        if (deletedPhoto && deletedPhoto.url_original === project?.cover_photo_url) {
+          setProject((prev) => prev ? { ...prev, cover_photo_url: null } : prev);
         }
       } else {
         const data = await res.json();
@@ -256,8 +271,41 @@ export default function GalleryPage() {
     }
   };
 
+  // Handle toggle favorit — panggil API biar tersimpan
+  const handleToggleFavorite = async (photoId: string, isFavorite: boolean) => {
+    // Optimistic update lokal
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === photoId ? { ...p, is_favorite: isFavorite } : p))
+    );
+
+    try {
+      const token = localStorage.getItem("sb-access-token");
+      const res = await fetch(`/api/photos/${photoId}/favorite`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ is_favorite: isFavorite }),
+      });
+
+      if (!res.ok) {
+        // Rollback jika gagal
+        setPhotos((prev) =>
+          prev.map((p) => (p.id === photoId ? { ...p, is_favorite: !isFavorite } : p))
+        );
+      }
+    } catch {
+      // Rollback jika error jaringan
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === photoId ? { ...p, is_favorite: !isFavorite } : p))
+      );
+    }
+  };
+
   // Handle set cover photo
   const handleSetCover = async (_photoId: string, urlOriginal: string) => {
+    if (!project) return;
     try {
       const token = localStorage.getItem("sb-access-token");
       if (!token) return;
@@ -272,7 +320,7 @@ export default function GalleryPage() {
       });
 
       if (res.ok) {
-        setProject((prev: any) => ({ ...prev, cover_photo_url: urlOriginal }));
+        setProject((prev) => prev ? { ...prev, cover_photo_url: urlOriginal } : prev);
       } else {
         const data = await res.json();
         alert(data.error || "Gagal mengatur foto profil proyek");
@@ -440,7 +488,7 @@ export default function GalleryPage() {
 
       {/* ── Indikator Tahap Pengerjaan ── */}
       <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8 animate-fadeIn">
-        <ProgressIndicator projectId={project.id} />
+        <ProgressIndicator projectId={project.id} currentStatus={project.progress_status} />
       </section>
 
       {/* ── Filter Tabs Khusus Admin ── */}
@@ -491,11 +539,7 @@ export default function GalleryPage() {
                 photo={photo}
                 isAdmin={isAdmin}
                 isCover={photo.url_original === project.cover_photo_url}
-                onToggleFavorite={(photoId, isFav) => {
-                  setPhotos(prev =>
-                    prev.map(p => p.id === photoId ? { ...p, is_favorite: isFav } : p)
-                  );
-                }}
+                onToggleFavorite={handleToggleFavorite}
                 onSetCover={handleSetCover}
                 onDelete={handleDeletePhoto}
               />

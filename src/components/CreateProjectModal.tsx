@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { Project } from "@/lib/types";
 
 interface CreateProjectModalProps {
   open: boolean;
   onClose: () => void;
-  onCreated: (project: any) => void;
+  onCreated: (project: Project) => void;
 }
 
 /**

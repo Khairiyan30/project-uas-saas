@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 interface UserProfile {
@@ -12,25 +12,74 @@ interface UserProfile {
 
 interface AuthContextType {
   user: UserProfile | null;
-  isLoading: boolean; // True while checking session, fetching profile
-  login: (accessToken: string) => Promise<void>;
-  logout: () => void;
+  isLoading: boolean;
+  login: (accessToken: string, refreshToken?: string) => Promise<void>;
+  logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TOKEN_KEY = "sb-access-token";
+const REFRESH_KEY = "sb-refresh-token";
+
+function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function storeSession(accessToken: string, refreshToken?: string) {
+  localStorage.setItem(TOKEN_KEY, accessToken);
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_KEY, refreshToken);
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+}
+
+async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/auth/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    const data = await res.json();
+    if (res.ok && data.session?.access_token) {
+      storeSession(data.session.access_token, data.session.refresh_token);
+      return data.session.access_token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Loading state for initial session check
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearAll = useCallback((redirect = true) => {
+    clearSession();
+    setUser(null);
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
+    }
+    if (redirect) {
+      router.push("/login");
+    }
+  }, [router]);
 
   const fetchUserProfile = useCallback(async (accessToken: string) => {
     try {
       const res = await fetch("/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();
 
@@ -38,51 +87,105 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser({
           id: data.user.id,
           email: data.user.email,
-          fullName: data.user.full_name || data.user.email, // Fallback to email if name is empty
+          fullName: data.user.full_name || data.user.email,
           avatarUrl: data.user.avatar_url,
         });
-      } else {
-        // If token is invalid or profile not found, clear session & redirect
-        localStorage.removeItem("sb-access-token");
-        setUser(null);
-        router.push("/login");
+        return true;
       }
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      localStorage.removeItem("sb-access-token");
-      setUser(null);
-      router.push("/login");
-    } finally {
-      setIsLoading(false);
+      return false;
+    } catch {
+      return false;
     }
   }, []);
 
-  // Initial check on mount
-  useEffect(() => {
-    const accessToken = localStorage.getItem("sb-access-token");
-    if (accessToken) {
-      fetchUserProfile(accessToken);
-    } else {
-      setIsLoading(false);
-    }
-  }, [fetchUserProfile]);
-
-  const login = useCallback(async (accessToken: string) => {
-    localStorage.setItem("sb-access-token", accessToken);
+  const attemptLogin = useCallback(async (accessToken: string) => {
     setIsLoading(true);
-    await fetchUserProfile(accessToken);
-  }, [fetchUserProfile]);
+    const ok = await fetchUserProfile(accessToken);
+    if (!ok) {
+      clearAll();
+    }
+    setIsLoading(false);
+    return ok;
+  }, [fetchUserProfile, clearAll]);
 
-  const logout = useCallback(() => {
-    // Panggil API logout
-    fetch("/api/auth/logout", { method: "POST" })
-      .catch((err) => console.error("Error during API logout:", err))
-      .finally(() => {
-        localStorage.removeItem("sb-access-token");
-        setUser(null);
-        router.push("/login");
-      });
-  }, [router]);
+  useEffect(() => {
+    const init = async () => {
+      const accessToken = getStoredToken();
+      if (!accessToken) {
+        const refreshToken = localStorage.getItem(REFRESH_KEY);
+        if (refreshToken) {
+          const newToken = await refreshAccessToken(refreshToken);
+          if (newToken) {
+            await fetchUserProfile(newToken);
+          } else {
+            clearAll(true);
+          }
+        } else {
+          clearAll(false);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      const ok = await fetchUserProfile(accessToken);
+      if (!ok) {
+        const refreshToken = localStorage.getItem(REFRESH_KEY);
+        if (refreshToken) {
+          const newToken = await refreshAccessToken(refreshToken);
+          if (newToken) {
+            await fetchUserProfile(newToken);
+          } else {
+            clearAll(true);
+          }
+        } else {
+          clearAll(true);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    init();
+  }, [fetchUserProfile, clearAll]);
+
+  useEffect(() => {
+    if (user) {
+      refreshIntervalRef.current = setInterval(async () => {
+        const refreshToken = localStorage.getItem(REFRESH_KEY);
+        if (refreshToken) {
+          const newToken = await refreshAccessToken(refreshToken);
+          if (newToken) {
+            await fetchUserProfile(newToken);
+          }
+        }
+      }, 14 * 60 * 1000);
+    }
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, [user, fetchUserProfile]);
+
+  const login = useCallback(async (accessToken: string, refreshToken?: string) => {
+    storeSession(accessToken, refreshToken);
+    await attemptLogin(accessToken);
+  }, [attemptLogin]);
+
+  const logout = useCallback(async () => {
+    const token = getStoredToken();
+    if (token) {
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        // silent — clear local anyway
+      }
+    }
+    clearAll(true);
+  }, [clearAll]);
 
   const updateProfile = useCallback((updates: Partial<UserProfile>) => {
     setUser((prev) => (prev ? { ...prev, ...updates } : null));

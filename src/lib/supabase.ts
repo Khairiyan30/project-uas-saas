@@ -1,4 +1,12 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { validateEnv } from "./env";
+
+const envMissing = validateEnv();
+if (envMissing.length > 0) {
+  console.error(
+    `[Shootlink] Environment variables missing: ${envMissing.join(", ")}`
+  );
+}
 
 function getSupabaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

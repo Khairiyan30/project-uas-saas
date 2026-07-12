@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:chromium": "playwright test --project=chromium",
+    "test:mobile": "playwright test --project=mobile",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",
@@ -15,12 +21,13 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/postcss": "^4.1.8",
     "@types/node": "^22.15.3",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
-    "typescript": "^5.8.3",
+    "postcss": "^8.5.4",
     "tailwindcss": "^4.1.8",
-    "@tailwindcss/postcss": "^4.1.8",
-    "postcss": "^8.5.4"
+    "typescript": "^5.8.3"
   }
 }

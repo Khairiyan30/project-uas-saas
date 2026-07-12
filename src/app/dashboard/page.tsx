@@ -1,30 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Sidebar } from "@/components/Sidebar";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useAuth } from "@/contexts/AuthContext";
-
-/* ── Data proyek kosong ── */
-const MOCK_PROJECTS: any[] = [];
-
-const STATUS_ORDER = [
-  "Persiapan",
-  "Uploading",
-  "Proses Edit",
-  "Menunggu Reviu",
-  "Tahap Kurasi Klien",
-  "Selesai",
-];
-
-function sortByStatus(projects: typeof MOCK_PROJECTS) {
-  return [...projects].sort(
-    (a, b) =>
-      STATUS_ORDER.indexOf(a.progress_status) -
-      STATUS_ORDER.indexOf(b.progress_status)
-  );
-}
+import { useProjects, sortByStatus } from "@/hooks/useProjects";
 
 /**
  * Dashboard Proyek — halaman utama fotografer.
@@ -33,47 +13,7 @@ function sortByStatus(projects: typeof MOCK_PROJECTS) {
 export default function DashboardPage() {
   const isAuthed = useRequireAuth();
   const { user } = useAuth();
-  const [projects, setProjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchProjects() {
-      const token = typeof window !== "undefined" ? localStorage.getItem("sb-access-token") : null;
-      if (!token) return;
-
-      try {
-        const res = await fetch("/api/projects", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await res.json();
-        if (res.ok && data.projects) {
-          // Optimasi: hilangkan fetch foto per proyek, gunakan data proyek dasar langsung
-          const projectsWithStats = data.projects.map((project: any) => ({
-            ...project,
-            photo_count: 0,
-            favorite_count: 0,
-            revision_count: 0,
-            cover_photo_url: project.cover_photo_url || null,
-            progress_percent: project.progress_status === "Selesai" ? 100 :
-                              project.progress_status === "Tahap Kurasi Klien" ? 80 :
-                              project.progress_status === "Menunggu Reviu" ? 60 :
-                              project.progress_status === "Proses Edit" ? 40 : 10,
-          }));
-          setProjects(sortByStatus(projectsWithStats));
-        }
-      } catch (err) {
-        console.error("Error loading dashboard projects:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (isAuthed) {
-      fetchProjects();
-    }
-  }, [isAuthed]);
+  const { projects, setProjects, loading } = useProjects(isAuthed);
 
   if (!isAuthed) {
     return (
@@ -101,8 +41,8 @@ export default function DashboardPage() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="ml-64 min-h-screen">
-        <div className="mx-auto max-w-6xl px-8 py-8">
+      <div className="lg:ml-64 min-h-screen">
+        <div className="mx-auto max-w-6xl px-4 py-4 pt-14 sm:px-8 sm:py-8 sm:pt-8">
           {/* Header */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">
@@ -114,7 +54,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="mb-8 grid grid-cols-4 gap-4">
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Total Proyek */}
             <div className="group rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-md">
               <div className="flex items-center gap-3">
@@ -198,6 +138,7 @@ export default function DashboardPage() {
               <Link
                 href="/proyek"
                 className="group inline-flex items-center gap-1 rounded-full bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-500 transition-all hover:bg-gray-100 hover:text-gray-900"
+                aria-label="Lihat semua proyek"
               >
                 Lihat Semua
                 <span className="transition-transform duration-300 group-hover:translate-x-0.5">→</span>

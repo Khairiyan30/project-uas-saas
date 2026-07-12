@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "Shootlink | Client Gallery & Proofing",
@@ -22,7 +23,9 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <AuthProvider>
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </AuthProvider>
       </body>
     </html>

@@ -1,45 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { ProjectCard } from "@/components/ProjectCard";
 import { ProjectTable } from "@/components/ProjectTable";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-
-/* ── Data proyek kosong ── */
-const MOCK_PROJECTS: any[] = [];
-
-const STATUS_ORDER = [
-  "Persiapan",
-  "Uploading",
-  "Proses Edit",
-  "Menunggu Reviu",
-  "Tahap Kurasi Klien",
-  "Selesai",
-];
+import { useProjects } from "@/hooks/useProjects";
+import type { Project } from "@/lib/types";
 
 const FILTER_TABS = [
-  { label: "Semua", status: null },
+  { label: "Semua", status: null as string | null },
   { label: "Booked", status: "Persiapan" },
   { label: "Shooting", status: "Uploading" },
   { label: "Editing", status: "Proses Edit" },
-  { label: "Review", status: "Menunggu Reviu" },
+  { label: "Review", status: "Menunggu Review" },
   { label: "Completed", status: "Selesai" },
 ];
 
 type SortOption = "name" | "date" | "status" | "progress";
 type ViewMode = "grid" | "table";
 
-function sortByStatus(projects: typeof MOCK_PROJECTS) {
-  return [...projects].sort(
-    (a, b) =>
-      STATUS_ORDER.indexOf(a.progress_status) -
-      STATUS_ORDER.indexOf(b.progress_status)
-  );
-}
+const STATUS_ORDER = [
+  "Persiapan", "Uploading", "Proses Edit",
+  "Menunggu Review", "Tahap Kurasi Klien", "Selesai",
+];
 
-function sortProjects(projects: typeof MOCK_PROJECTS, sort: SortOption) {
+function sortProjects(projects: Project[], sort: SortOption): Project[] {
   const sorted = [...projects];
   switch (sort) {
     case "name":
@@ -56,64 +43,22 @@ function sortProjects(projects: typeof MOCK_PROJECTS, sort: SortOption) {
           STATUS_ORDER.indexOf(b.progress_status)
       );
     case "progress":
-      return sorted.sort((a, b) => b.progress_percent - a.progress_percent);
+      return sorted.sort((a, b) => (b.progress_percent ?? 0) - (a.progress_percent ?? 0));
     default:
       return sorted;
   }
 }
 
-/**
- * Halaman Proyek — manajemen proyek lengkap.
- * Fokus pada CRUD, filter, sort, dan switcher view.
- */
 export default function ProyekPage() {
   const isAuthed = useRequireAuth();
-  const [projects, setProjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { projects, setProjects, loading } = useProjects(isAuthed);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
-  useEffect(() => {
-    async function fetchProjects() {
-      const token = typeof window !== "undefined" ? localStorage.getItem("sb-access-token") : null;
-      if (!token) return;
-
-      try {
-        const res = await fetch("/api/projects", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await res.json();
-        if (res.ok && data.projects) {
-          // Optimasi: hilangkan fetch foto per proyek, gunakan data proyek dasar langsung
-          const projectsWithStats = data.projects.map((project: any) => ({
-            ...project,
-            photo_count: 0,
-            favorite_count: 0,
-            revision_count: 0,
-            cover_photo_url: project.cover_photo_url || null,
-            progress_percent: project.progress_status === "Selesai" ? 100 :
-                              project.progress_status === "Tahap Kurasi Klien" ? 80 :
-                              project.progress_status === "Menunggu Reviu" ? 60 :
-                              project.progress_status === "Proses Edit" ? 40 : 10,
-          }));
-          setProjects(sortProjects(projectsWithStats, sortBy));
-        }
-      } catch (err) {
-        console.error("Error loading projects:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (isAuthed) {
-      fetchProjects();
-    }
-  }, [isAuthed, sortBy]);
+  const sortedProjects = useMemo(() => sortProjects(projects, sortBy), [projects, sortBy]);
 
   if (!isAuthed) {
     return (
@@ -123,7 +68,7 @@ export default function ProyekPage() {
     );
   }
 
-  const handleProjectCreated = (newProject: any) => {
+  const handleProjectCreated = (newProject: Project) => {
     setProjects((prev) =>
       sortProjects(
         [
@@ -142,7 +87,7 @@ export default function ProyekPage() {
   };
 
   // Filter & search
-  const filteredProjects = projects.filter((p) => {
+  const filteredProjects = sortedProjects.filter((p) => {
     const matchesFilter = !activeFilter || p.progress_status === activeFilter;
     const matchesSearch =
       !searchQuery ||
@@ -153,8 +98,8 @@ export default function ProyekPage() {
 
   // Count per filter tab
   const getCountForTab = (status: string | null) => {
-    if (!status) return projects.length;
-    return projects.filter((p) => p.progress_status === status).length;
+    if (!status) return sortedProjects.length;
+    return sortedProjects.filter((p) => p.progress_status === status).length;
   };
 
   return (
@@ -162,8 +107,8 @@ export default function ProyekPage() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="ml-64 min-h-screen">
-        <div className="mx-auto max-w-6xl px-8 py-8">
+      <div className="lg:ml-64 min-h-screen">
+        <div className="mx-auto max-w-6xl px-4 py-4 pt-14 sm:px-8 sm:py-8 sm:pt-8">
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">
             <div>
@@ -185,8 +130,8 @@ export default function ProyekPage() {
           </div>
 
           {/* Filter Tabs + Search + View Switcher */}
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-1.5">
               {FILTER_TABS.map((tab) => {
                 const count = getCountForTab(tab.status);
                 const isActive = activeFilter === tab.status;
@@ -209,7 +154,7 @@ export default function ProyekPage() {
               })}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               {/* Sort dropdown */}
               <div className="relative flex items-center">
                 <i className="ri-sort-asc absolute left-3 text-base pointer-events-none text-gray-400" />
@@ -236,6 +181,7 @@ export default function ProyekPage() {
                       : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                   }`}
                   title="Grid view"
+                  aria-label="Tampilan grid"
                 >
                   <i className="ri-grid-line text-base" />
                 </button>
@@ -247,6 +193,7 @@ export default function ProyekPage() {
                       : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                   }`}
                   title="Table view"
+                  aria-label="Tampilan tabel"
                 >
                   <i className="ri-list-check text-base" />
                 </button>
@@ -260,7 +207,7 @@ export default function ProyekPage() {
                   placeholder="Cari proyek..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-56 rounded-full border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+                  className="w-full sm:w-56 rounded-full border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
                 />
               </div>
             </div>

@@ -49,7 +49,7 @@ export default function LoginPage() {
       }
 
       if (data.session?.access_token) {
-        await authLogin(data.session.access_token);
+        await authLogin(data.session.access_token, data.session.refresh_token);
       }
 
       router.push("/dashboard");

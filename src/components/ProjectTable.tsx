@@ -1,29 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import type { Project } from "@/lib/types";
 
 interface ProjectTableProps {
-  projects: {
-    id: string;
-    name: string;
-    event_type: string;
-    description: string;
-    progress_status: string;
-    unique_slug: string;
-    created_at: string;
-    photo_count: number;
-    favorite_count: number;
-    revision_count: number;
-    progress_percent: number;
-    cover_photo_url?: string | null;
-  }[];
+  projects: Project[];
 }
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   Persiapan: { label: "Booked", className: "bg-sky-50 text-sky-600 border-sky-200" },
   Uploading: { label: "Shooting", className: "bg-amber-50 text-amber-600 border-amber-200" },
   "Proses Edit": { label: "Editing", className: "bg-violet-50 text-violet-600 border-violet-200" },
-  "Menunggu Reviu": { label: "Review", className: "bg-pink-50 text-pink-600 border-pink-200" },
+  "Menunggu Review": { label: "Review", className: "bg-pink-50 text-pink-600 border-pink-200" },
   "Tahap Kurasi Klien": { label: "Curation", className: "bg-orange-50 text-orange-600 border-orange-200" },
   Selesai: { label: "Completed", className: "bg-emerald-50 text-emerald-600 border-emerald-200" },
 };
@@ -124,16 +112,16 @@ export function ProjectTable({ projects }: ProjectTableProps) {
                 <td className="px-5 py-4">
                   <div className="w-full max-w-[120px]">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-gray-500">{project.progress_percent}%</span>
+                      <span className="text-[10px] font-bold text-gray-500">{project.progress_percent ?? 0}%</span>
                     </div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          project.progress_percent >= 100 ? "bg-[#65195E]" :
-                          project.progress_percent >= 60 ? "bg-[#91157E]" :
-                          project.progress_percent >= 30 ? "bg-[#C246C6]" : "bg-gray-300"
+                          (project.progress_percent ?? 0) >= 100 ? "bg-[#65195E]" :
+                          (project.progress_percent ?? 0) >= 60 ? "bg-[#91157E]" :
+                          (project.progress_percent ?? 0) >= 30 ? "bg-[#C246C6]" : "bg-gray-300"
                         }`}
-                        style={{ width: `${project.progress_percent}%` }}
+                        style={{ width: `${project.progress_percent ?? 0}%` }}
                       />
                     </div>
                   </div>

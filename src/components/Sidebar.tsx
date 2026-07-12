@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout: authLogout } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
 
-  const handleLogout = () => {
-    authLogout();
+  const handleLogout = async () => {
+    await authLogout();
   };
 
   const menuItems = [
@@ -31,7 +33,28 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="fixed inset-y-0 left-0 flex w-64 flex-col border-r border-gray-100 bg-white px-4 py-6">
+    <>
+      {/* Mobile hamburger */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-md lg:hidden"
+        aria-label={isOpen ? "Tutup menu" : "Buka menu"}
+      >
+        <i className={isOpen ? "ri-close-line text-xl" : "ri-menu-line text-xl"} />
+      </button>
+
+      {/* Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-gray-100 bg-white px-4 py-6 transition-transform duration-300 lg:translate-x-0 ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
       {/* Logo */}
       <div className="mb-8 flex items-center gap-3 px-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden shadow-sm transition-transform duration-300 hover:rotate-12">
@@ -110,5 +133,6 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

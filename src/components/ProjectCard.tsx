@@ -2,22 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import type { Project } from "@/lib/types";
 
 interface ProjectCardProps {
-  project: {
-    id: string;
-    name: string;
-    event_type: string;
-    description: string;
-    progress_status: string;
-    unique_slug: string;
-    created_at: string;
-    photo_count: number;
-    favorite_count: number;
-    revision_count: number;
-    progress_percent: number;
-    cover_photo_url?: string | null;
-  };
+  project: Project;
 }
 
 // Mapping progress_status ke badge label + warna soft
@@ -34,7 +22,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
     label: "Editing",
     className: "bg-violet-50 text-violet-600 border-violet-200",
   },
-  "Menunggu Reviu": {
+  "Menunggu Review": {
     label: "Review",
     className: "bg-pink-50 text-pink-600 border-pink-200",
   },
@@ -56,10 +44,11 @@ function getStatusBadge(status: string) {
 }
 
 // Progress bar color based on percent
-function getProgressColor(percent: number): string {
-  if (percent >= 100) return "bg-[#65195E]";
-  if (percent >= 60) return "bg-[#91157E]";
-  if (percent >= 30) return "bg-[#C246C6]";
+function getProgressColor(percent: number | undefined): string {
+  const p = percent ?? 0;
+  if (p >= 100) return "bg-[#65195E]";
+  if (p >= 60) return "bg-[#91157E]";
+  if (p >= 30) return "bg-[#C246C6]";
   return "bg-gray-300";
 }
 

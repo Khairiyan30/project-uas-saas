@@ -4,13 +4,14 @@ import { useProjectRealtime } from "@/hooks/useProjectRealtime";
 
 interface ProgressIndicatorProps {
   projectId: string;
+  currentStatus?: string;
 }
 
 const STEPS = [
   { value: "Persiapan", label: "Persiapan" },
   { value: "Uploading", label: "Uploading" },
   { value: "Proses Edit", label: "Editing" },
-  { value: "Menunggu Reviu", label: "Review" },
+  { value: "Menunggu Review", label: "Review" },
   { value: "Tahap Kurasi Klien", label: "Kurasi Klien" },
   { value: "Selesai", label: "Selesai" }
 ] as const;
@@ -19,8 +20,8 @@ const STEPS = [
  * Indikator tahap pengerjaan proyek — subscribe Supabase Realtime,
  * auto-update saat fotografer mengubah status tanpa perlu refresh.
  */
-export function ProgressIndicator({ projectId }: ProgressIndicatorProps) {
-  const currentStatus = useProjectRealtime(projectId);
+export function ProgressIndicator({ projectId, currentStatus: propStatus }: ProgressIndicatorProps) {
+  const currentStatus = useProjectRealtime(projectId, propStatus);
 
   const activeIndex = STEPS.findIndex(
     (step) => step.value.toLowerCase() === currentStatus.toLowerCase()

@@ -17,7 +17,7 @@ function getSupabaseAuth() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { password, access_token } = body;
+    const { password, access_token: bodyToken } = body;
 
     if (!password || password.length < 6) {
       return NextResponse.json(
@@ -28,10 +28,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAuth();
 
-    // Jika ada access_token dari URL hash, set session dulu
-    if (access_token) {
+    // Prioritaskan token dari header, lalu dari body (hash URL reset-password)
+    const authHeader = request.headers.get("Authorization");
+    const accessToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.replace("Bearer ", "")
+      : bodyToken;
+
+    if (accessToken) {
       await supabase.auth.setSession({
-        access_token,
+        access_token: accessToken,
         refresh_token: "",
       });
     }

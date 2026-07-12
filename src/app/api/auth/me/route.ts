@@ -40,8 +40,7 @@ export async function GET(request: NextRequest) {
     const token = authHeader.replace("Bearer ", "");
     const supabase = createAuthedSupabase(token);
 
-    // Verifikasi token & dapatkan user
-    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
     if (authError || !authData.user) {
       return NextResponse.json(
         { error: "Token tidak valid atau sudah expired" },
@@ -51,7 +50,6 @@ export async function GET(request: NextRequest) {
 
     const user = authData.user;
 
-    // Coba ambil profil
     let { data: profile, error } = await supabase
       .from("profiles")
       .select("id, email, full_name, avatar_url, created_at")
@@ -114,8 +112,7 @@ export async function PUT(request: NextRequest) {
     const token = authHeader.replace("Bearer ", "");
     const supabase = createAuthedSupabase(token);
 
-    // Verifikasi token & dapatkan user
-    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
     if (authError || !authData.user) {
       return NextResponse.json(
         { error: "Token tidak valid atau sudah expired" },

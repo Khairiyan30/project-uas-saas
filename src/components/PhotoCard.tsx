@@ -1,18 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { BeforeAfterSlider } from "@/components/BeforeAfterSlider";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import type { Photo } from "@/lib/types";
 
 interface PhotoCardProps {
-  photo: {
-    id: string;
-    url_original: string;
-    url_edited: string | null;
-    filename: string;
-    is_favorite: boolean;
-  };
+  photo: Photo;
   isAdmin?: boolean;
   isCover?: boolean;
   onToggleFavorite?: (photoId: string, isFavorite: boolean) => void;
@@ -29,6 +24,10 @@ export function PhotoCard({ photo, isAdmin, isCover, onToggleFavorite, onSetCove
   const [isFavorite, setIsFavorite] = useState(photo.is_favorite);
   const [showCompare, setShowCompare] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    setIsFavorite(photo.is_favorite);
+  }, [photo.is_favorite]);
 
   const handleToggleFavorite = () => {
     const newState = !isFavorite;
