@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { ProjectCard } from "@/components/ProjectCard";
 import { ProjectTable } from "@/components/ProjectTable";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
-/* ── Data proyek kosong (akan diisi dari API/database) ── */
+/* ── Data proyek kosong ── */
 const MOCK_PROJECTS: any[] = [];
 
 const STATUS_ORDER = [
@@ -68,12 +68,52 @@ function sortProjects(projects: typeof MOCK_PROJECTS, sort: SortOption) {
  */
 export default function ProyekPage() {
   const isAuthed = useRequireAuth();
-  const [projects, setProjects] = useState(() => sortProjects(MOCK_PROJECTS, "date"));
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+  useEffect(() => {
+    async function fetchProjects() {
+      const token = typeof window !== "undefined" ? localStorage.getItem("sb-access-token") : null;
+      if (!token) return;
+
+      try {
+        const res = await fetch("/api/projects", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok && data.projects) {
+          // Optimasi: hilangkan fetch foto per proyek, gunakan data proyek dasar langsung
+          const projectsWithStats = data.projects.map((project: any) => ({
+            ...project,
+            photo_count: 0,
+            favorite_count: 0,
+            revision_count: 0,
+            cover_photo_url: project.cover_photo_url || null,
+            progress_percent: project.progress_status === "Selesai" ? 100 :
+                              project.progress_status === "Tahap Kurasi Klien" ? 80 :
+                              project.progress_status === "Menunggu Reviu" ? 60 :
+                              project.progress_status === "Proses Edit" ? 40 : 10,
+          }));
+          setProjects(sortProjects(projectsWithStats, sortBy));
+        }
+      } catch (err) {
+        console.error("Error loading projects:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (isAuthed) {
+      fetchProjects();
+    }
+  }, [isAuthed, sortBy]);
 
   if (!isAuthed) {
     return (
@@ -227,7 +267,18 @@ export default function ProyekPage() {
           </div>
 
           {/* Daftar Proyek */}
-          {filteredProjects.length === 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                  <div className="h-40 animate-pulse rounded-xl bg-gray-100" />
+                  <div className="mt-4 h-5 w-2/3 animate-pulse rounded bg-gray-100" />
+                  <div className="mt-2 h-4 w-1/3 animate-pulse rounded bg-gray-100" />
+                  <div className="mt-4 h-1.5 w-full animate-pulse rounded bg-gray-100" />
+                </div>
+              ))}
+            </div>
+          ) : filteredProjects.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-white px-6 py-16 text-center">
               <i className="ri-folder-line mb-4 text-6xl text-gray-200" />
               <h3 className="text-lg font-medium text-gray-900">

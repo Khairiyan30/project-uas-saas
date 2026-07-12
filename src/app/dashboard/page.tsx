@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Sidebar } from "@/components/Sidebar";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useAuth } from "@/contexts/AuthContext";
 
-/* ── Data proyek kosong (akan diisi dari API/database) ── */
+/* ── Data proyek kosong ── */
 const MOCK_PROJECTS: any[] = [];
 
 const STATUS_ORDER = [
@@ -32,7 +33,47 @@ function sortByStatus(projects: typeof MOCK_PROJECTS) {
 export default function DashboardPage() {
   const isAuthed = useRequireAuth();
   const { user } = useAuth();
-  const projects = sortByStatus(MOCK_PROJECTS);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProjects() {
+      const token = typeof window !== "undefined" ? localStorage.getItem("sb-access-token") : null;
+      if (!token) return;
+
+      try {
+        const res = await fetch("/api/projects", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok && data.projects) {
+          // Optimasi: hilangkan fetch foto per proyek, gunakan data proyek dasar langsung
+          const projectsWithStats = data.projects.map((project: any) => ({
+            ...project,
+            photo_count: 0,
+            favorite_count: 0,
+            revision_count: 0,
+            cover_photo_url: project.cover_photo_url || null,
+            progress_percent: project.progress_status === "Selesai" ? 100 :
+                              project.progress_status === "Tahap Kurasi Klien" ? 80 :
+                              project.progress_status === "Menunggu Reviu" ? 60 :
+                              project.progress_status === "Proses Edit" ? 40 : 10,
+          }));
+          setProjects(sortByStatus(projectsWithStats));
+        }
+      } catch (err) {
+        console.error("Error loading dashboard projects:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (isAuthed) {
+      fetchProjects();
+    }
+  }, [isAuthed]);
 
   if (!isAuthed) {
     return (
@@ -78,11 +119,15 @@ export default function DashboardPage() {
             <div className="group rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-md">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F8F8F8] text-[#65195E] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
-                  <div className="h-6 w-6 bg-current" style={{ maskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Document/folders-line.svg)', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Document/folders-line.svg)', WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center' }} />
+                  <i className="ri-folder-line text-xl"></i>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-400">Total Proyek</p>
-                  <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#65195E]">{totalProjects}</p>
+                  {loading ? (
+                    <div className="h-7 w-12 animate-pulse rounded bg-gray-100 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#65195E]">{totalProjects}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -95,7 +140,11 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-400">Proyek Aktif</p>
-                  <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#91157E]">{activeProjects}</p>
+                  {loading ? (
+                    <div className="h-7 w-12 animate-pulse rounded bg-gray-100 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#91157E]">{activeProjects}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -108,7 +157,11 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-400">Total Foto</p>
-                  <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#91157E]">{totalPhotos}</p>
+                  {loading ? (
+                    <div className="h-7 w-12 animate-pulse rounded bg-gray-100 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#91157E]">{totalPhotos}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -121,7 +174,11 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-400">Foto Favorit</p>
-                  <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#C246C6]">{totalFavorites}</p>
+                  {loading ? (
+                    <div className="h-7 w-12 animate-pulse rounded bg-gray-100 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#C246C6]">{totalFavorites}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -147,7 +204,25 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            {projectsNeedingAttention.length === 0 ? (
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div key={i} className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="flex items-center gap-4">
+                      <div className="h-11 w-11 animate-pulse rounded-lg bg-gray-100" />
+                      <div>
+                        <div className="h-4 w-32 animate-pulse rounded bg-gray-100" />
+                        <div className="h-3 w-20 animate-pulse rounded bg-gray-100 mt-1.5" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="h-6 w-24 animate-pulse rounded bg-gray-100" />
+                      <div className="h-6 w-16 animate-pulse rounded bg-gray-100" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : projectsNeedingAttention.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
                   <i className="ri-check-line text-2xl"></i>

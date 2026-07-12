@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 
 interface ProjectCardProps {
   project: {
@@ -15,6 +16,7 @@ interface ProjectCardProps {
     favorite_count: number;
     revision_count: number;
     progress_percent: number;
+    cover_photo_url?: string | null;
   };
 }
 
@@ -69,10 +71,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
     <div className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-lg">
       {/* Thumbnail + Status Badge */}
       <div className="relative h-40 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
-        {/* Placeholder thumbnail pattern */}
-        <div className="absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
-          <i className="ri-image-line text-5xl text-gray-300 transition-colors duration-300 group-hover:text-gray-400" />
-        </div>
+        {project.cover_photo_url ? (
+          <Image
+            src={project.cover_photo_url}
+            alt={project.name}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-110">
+            <i className="ri-image-line text-5xl text-gray-300 transition-colors duration-300 group-hover:text-gray-400" />
+          </div>
+        )}
 
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -131,7 +142,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <div className="flex items-center gap-3">
             {/* Foto count */}
             <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
-              <i className="ri-camera-3-line text-sm" />
+              <i className="ri-camera-4-line text-sm" />
               <span className="text-[10px] font-semibold">{project.photo_count}</span>
             </div>
             {/* Favorite count */}

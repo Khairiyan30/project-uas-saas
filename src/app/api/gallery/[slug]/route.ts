@@ -29,7 +29,7 @@ export async function GET(
     // Ambil data proyek
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, name, event_type, description, progress_status, unique_slug, created_at")
+      .select("id, name, event_type, description, progress_status, unique_slug, created_at, cover_photo_url")
       .eq("unique_slug", slug.trim())
       .single();
 

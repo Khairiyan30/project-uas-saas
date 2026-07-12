@@ -42,15 +42,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatarUrl: data.user.avatar_url,
         });
       } else {
-        console.error("Failed to fetch user profile:", data.error);
-        // If token is invalid or profile not found, clear session
+        // If token is invalid or profile not found, clear session & redirect
         localStorage.removeItem("sb-access-token");
         setUser(null);
+        router.push("/login");
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
       localStorage.removeItem("sb-access-token");
       setUser(null);
+      router.push("/login");
     } finally {
       setIsLoading(false);
     }

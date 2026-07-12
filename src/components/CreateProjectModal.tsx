@@ -50,33 +50,44 @@ export function CreateProjectModal({
 
     setIsSubmitting(true);
 
-    // Generate unique slug
-    const slug =
-      form.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "") +
-      "-" +
-      Math.random().toString(36).substring(2, 7);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("sb-access-token") : null;
+      
+      if (!token) {
+        setError("Sesi Anda telah kedaluwarsa. Silakan login kembali.");
+        setIsSubmitting(false);
+        return;
+      }
 
-    const newProject = {
-      id: crypto.randomUUID(),
-      name: form.name.trim(),
-      event_type: form.event_type.trim(),
-      description: form.description.trim(),
-      progress_status: "Persiapan",
-      unique_slug: slug,
-      created_at: new Date().toISOString(),
-      user_id: "mock-user",
-    };
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          event_type: form.event_type.trim(),
+          description: form.description.trim(),
+        }),
+      });
 
-    // Simulasi delay
-    await new Promise((r) => setTimeout(r, 500));
+      const data = await res.json();
 
-    onCreated(newProject);
-    setForm({ name: "", event_type: "", description: "" });
-    setIsSubmitting(false);
-    onClose();
+      if (!res.ok) {
+        setError(data.error || "Gagal membuat proyek baru");
+        setIsSubmitting(false);
+        return;
+      }
+
+      onCreated(data.project);
+      setForm({ name: "", event_type: "", description: "" });
+      setIsSubmitting(false);
+      onClose();
+    } catch (err) {
+      setError("Terjadi kesalahan koneksi. Silakan coba lagi.");
+      setIsSubmitting(false);
+    }
   };
 
   return (

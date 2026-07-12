@@ -15,6 +15,7 @@ interface ProjectTableProps {
     favorite_count: number;
     revision_count: number;
     progress_percent: number;
+    cover_photo_url?: string | null;
   }[];
 }
 
@@ -73,8 +74,16 @@ export function ProjectTable({ projects }: ProjectTableProps) {
                 {/* Proyek */}
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
-                      <i className="ri-image-line text-base" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 text-gray-400">
+                      {project.cover_photo_url ? (
+                        <img
+                          src={project.cover_photo_url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <i className="ri-image-line text-base" />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">

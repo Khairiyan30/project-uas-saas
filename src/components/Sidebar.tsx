@@ -26,7 +26,7 @@ export function Sidebar() {
     {
       name: "Pengaturan",
       href: "/settings",
-      icon: <i className="ri-settings-3-line"></i>,
+      icon: <div className="h-5 w-5 bg-current" style={{ maskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/User%20%26%20Faces/user-settings-line.svg)', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/User%20%26%20Faces/user-settings-line.svg)', WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center' }} />,
     },
   ];
 
@@ -78,15 +78,19 @@ export function Sidebar() {
       <div className="border-t border-gray-100 pt-6 px-1">
         {/* Profile Card */}
         <div className="mb-4 flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-gray-50">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gray-800 to-black text-xs font-bold text-white uppercase ring-2 ring-white shadow-sm">
-            {user?.fullName
-              ? user.fullName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)
-              : "U"}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gray-800 to-black text-xs font-bold text-white uppercase ring-2 ring-white shadow-sm overflow-hidden">
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.fullName} className="h-full w-full object-cover" />
+            ) : (
+              user?.fullName
+                ? user.fullName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)
+                : "U"
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-bold text-gray-900">{user?.fullName || "Loading..."}</p>

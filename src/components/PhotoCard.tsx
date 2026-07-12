@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { BeforeAfterSlider } from "@/components/BeforeAfterSlider";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 interface PhotoCardProps {
   photo: {
@@ -12,22 +13,40 @@ interface PhotoCardProps {
     filename: string;
     is_favorite: boolean;
   };
+  isAdmin?: boolean;
+  isCover?: boolean;
   onToggleFavorite?: (photoId: string, isFavorite: boolean) => void;
+  onSetCover?: (photoId: string, urlOriginal: string) => void;
+  onDelete?: (photoId: string) => void;
 }
 
 /**
- * Kartu foto di galeri klien — menampilkan gambar dengan tombol favorit
- * dan tombol perbandingan sebelum-sesudah (jika url_edited tersedia).
+ * Kartu foto di galeri klien — menampilkan gambar dengan tombol favorit,
+ * tombol perbandingan sebelum-sesudah (jika url_edited tersedia),
+ * dan tombol hapus (khusus admin/fotografer).
  */
-export function PhotoCard({ photo, onToggleFavorite }: PhotoCardProps) {
+export function PhotoCard({ photo, isAdmin, isCover, onToggleFavorite, onSetCover, onDelete }: PhotoCardProps) {
   const [isFavorite, setIsFavorite] = useState(photo.is_favorite);
   const [showCompare, setShowCompare] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleToggleFavorite = () => {
     const newState = !isFavorite;
     setIsFavorite(newState);
     onToggleFavorite?.(photo.id, newState);
-    // TODO: panggil API PATCH /api/projects/[id]/photos/[photoId]/favorite
+  };
+
+  const handleDelete = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    setShowDeleteConfirm(false);
+    onDelete?.(photo.id);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
   };
 
   return (
@@ -49,6 +68,40 @@ export function PhotoCard({ photo, onToggleFavorite }: PhotoCardProps) {
           <span className="text-xs text-white">{photo.filename}</span>
         </div>
 
+        {/* Tombol Hapus (khusus admin) */}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            aria-label="Hapus foto"
+            className="absolute left-2 bottom-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-red-500 shadow-md opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-red-500 hover:text-white active:scale-90"
+          >
+            <i className="ri-delete-bin-6-line text-sm" />
+          </button>
+        )}
+
+        {/* Tombol Set as Cover (khusus admin) */}
+        {isAdmin && !isCover && (
+          <button
+            type="button"
+            onClick={() => onSetCover?.(photo.id, photo.url_original)}
+            aria-label="Jadikan foto profil proyek"
+            title="Jadikan foto profil proyek"
+            className="absolute right-2 bottom-2 flex h-8 items-center gap-1 rounded-full bg-white/80 px-2.5 text-xs font-medium text-gray-600 shadow-md opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-white hover:text-[#65195E] active:scale-90"
+          >
+            <i className="ri-image-edit-line text-sm" />
+            <span className="hidden sm:inline">Cover</span>
+          </button>
+        )}
+
+        {/* Badge Cover */}
+        {isCover && (
+          <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-[#65195E]/90 px-2 py-0.5 text-[10px] font-bold text-white shadow-md">
+            <i className="ri-image-edit-line text-xs" />
+            Cover
+          </span>
+        )}
+
         {/* Tombol Favorit */}
         <button
           type="button"
@@ -60,20 +113,7 @@ export function PhotoCard({ photo, onToggleFavorite }: PhotoCardProps) {
               : "bg-white/80 text-gray-400 hover:bg-white hover:text-red-400"
           }`}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill={isFavorite ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth={isFavorite ? 0 : 2}
-            className="h-5 w-5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-            />
-          </svg>
+          <i className={isFavorite ? "ri-heart-fill text-lg" : "ri-heart-line text-lg"} />
         </button>
 
         {/* Tombol Perbandingan Sebelum-Sesudah (hanya jika ada url_edited) */}
@@ -82,22 +122,9 @@ export function PhotoCard({ photo, onToggleFavorite }: PhotoCardProps) {
             type="button"
             onClick={() => setShowCompare(true)}
             aria-label="Bandingkan sebelum dan sesudah"
-            className="absolute left-2 top-2 flex h-9 items-center gap-1 rounded-full bg-white/80 px-2.5 text-xs font-medium text-gray-600 shadow-md transition-all hover:bg-white hover:text-blue-600"
+            className="absolute left-2 top-2 flex h-8 items-center gap-1 rounded-full bg-white/80 px-2.5 text-xs font-medium text-gray-600 shadow-md transition-all hover:bg-white hover:text-[#65195E]"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              className="h-4 w-4"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
-              />
-            </svg>
+            <i className="ri-arrow-left-right-line text-sm" />
             <span className="hidden sm:inline">Bandingkan</span>
           </button>
         )}
@@ -112,6 +139,18 @@ export function PhotoCard({ photo, onToggleFavorite }: PhotoCardProps) {
           onClose={() => setShowCompare(false)}
         />
       )}
+
+      {/* Modal konfirmasi hapus foto */}
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="Hapus Foto"
+        message={`Apakah Anda yakin ingin menghapus foto "${photo.filename}" dari proyek ini? Tindakan ini tidak dapat dibatalkan.`}
+        confirmLabel="Ya, Hapus"
+        cancelLabel="Batal"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </>
   );
 }

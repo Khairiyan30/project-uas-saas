@@ -6,7 +6,14 @@ interface ProgressIndicatorProps {
   projectId: string;
 }
 
-const STEPS = ["Persiapan", "Proses Edit", "Menunggu Reviu", "Selesai"] as const;
+const STEPS = [
+  { value: "Persiapan", label: "Persiapan" },
+  { value: "Uploading", label: "Uploading" },
+  { value: "Proses Edit", label: "Editing" },
+  { value: "Menunggu Reviu", label: "Review" },
+  { value: "Tahap Kurasi Klien", label: "Kurasi Klien" },
+  { value: "Selesai", label: "Selesai" }
+] as const;
 
 /**
  * Indikator tahap pengerjaan proyek — subscribe Supabase Realtime,
@@ -16,7 +23,7 @@ export function ProgressIndicator({ projectId }: ProgressIndicatorProps) {
   const currentStatus = useProjectRealtime(projectId);
 
   const activeIndex = STEPS.findIndex(
-    (step) => step.toLowerCase() === currentStatus.toLowerCase()
+    (step) => step.value.toLowerCase() === currentStatus.toLowerCase()
   );
 
   if (activeIndex === -1) {
@@ -29,7 +36,7 @@ export function ProgressIndicator({ projectId }: ProgressIndicatorProps) {
 
   return (
     <div className="mb-8 rounded-lg bg-white p-4 shadow-sm sm:p-6">
-      <p className="mb-3 text-xs font-medium uppercase tracking-wider text-gray-400">
+      <p className="mb-5 text-xs font-semibold uppercase tracking-wider text-gray-400">
         Tahap Pengerjaan
       </p>
       <div className="flex items-center">
@@ -37,7 +44,7 @@ export function ProgressIndicator({ projectId }: ProgressIndicatorProps) {
           const isCompleted = index < activeIndex;
           const isActive = index === activeIndex;
           return (
-            <div key={step} className="flex flex-1 items-center">
+            <div key={step.value} className="flex flex-1 items-center">
               <div className="flex flex-col items-center">
                 <div
                   className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all sm:h-10 sm:w-10 sm:text-sm ${
@@ -49,33 +56,21 @@ export function ProgressIndicator({ projectId }: ProgressIndicatorProps) {
                   }`}
                 >
                   {isCompleted ? (
-                    <svg
-                      className="h-4 w-4 sm:h-5 sm:w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={3}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                    <i className="ri-check-line text-sm sm:text-base text-white" />
                   ) : (
                     index + 1
                   )}
                 </div>
                 <span
-                  className={`mt-1.5 text-center text-[10px] leading-tight sm:text-xs ${
+                  className={`mt-2 text-center text-[9px] font-bold leading-tight tracking-tight sm:text-xs ${
                     isActive
-                      ? "font-semibold text-[#65195E]"
+                      ? "text-[#65195E]"
                       : isCompleted
-                        ? "font-medium text-green-600"
+                        ? "text-green-600"
                         : "text-gray-400"
                   }`}
                 >
-                  {step}
+                  {step.label}
                 </span>
               </div>
               {index < STEPS.length - 1 && (

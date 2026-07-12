@@ -34,7 +34,7 @@ export async function GET(
     const { data: project, error } = await supabase
       .from("projects")
       .select(
-        "id, user_id, name, event_type, description, progress_status, unique_slug, created_at"
+        "id, user_id, name, event_type, description, progress_status, unique_slug, created_at, cover_photo_url"
       )
       .eq("id", id)
       .single();
@@ -168,7 +168,7 @@ export async function PUT(
       .from("projects")
       .update(updateData)
       .eq("id", id)
-      .select("id, name, event_type, description, progress_status, unique_slug, created_at")
+      .select("id, name, event_type, description, progress_status, unique_slug, created_at, cover_photo_url")
       .single();
 
     if (error) {

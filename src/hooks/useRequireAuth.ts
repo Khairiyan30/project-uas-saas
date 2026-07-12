@@ -1,29 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
- * Hook proteksi route — redirect ke /login jika user belum login.
- * Mengecek token Supabase di localStorage.
+ * Hook proteksi route — redirect ke /login jika user belum login atau sesi expired.
  * 
- * Returns `true` saat user terautentikasi (memiliki token), `false` saat sedang redirect.
+ * Returns `true` saat user terautentikasi (memiliki profil valid), `false` saat sedang memuat/redirect.
  */
 export function useRequireAuth(): boolean {
   const router = useRouter();
-  const [isAuthed, setIsAuthed] = useState(false);
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    // Cek apakah user login (memiliki token)
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("sb-access-token")
-        : null;
-
-    if (!token) {
+    // Jika proses loading selesai dan user null (tidak login/token expired)
+    if (!isLoading && !user) {
       router.replace("/login");
-    } else {
-      setIsAuthed(true);
     }
-  }, [router]);
+  }, [user, isLoading, router]);
 
-  return isAuthed;
+  // Mengembalikan true hanya jika loading selesai dan user ada
+  return !isLoading && !!user;
 }
