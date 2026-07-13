@@ -21,20 +21,16 @@ interface PhotoCardProps {
   onToggleFavorite?: (photoId: string, isFavorite: boolean) => void;
   onSetCover?: (photoId: string, urlOriginal: string) => void;
   onDelete?: (photoId: string) => void;
-  onApprove?: (photoId: string) => void;
-  onReject?: (photoId: string) => void;
 }
 
-export function PhotoCard({ photo, isOwner, isCover, watermark, onToggleFavorite, onSetCover, onDelete, onApprove, onReject }: PhotoCardProps) {
+export function PhotoCard({ photo, isOwner, isCover, watermark, onToggleFavorite, onSetCover, onDelete }: PhotoCardProps) {
   const [isFavorite, setIsFavorite] = useState(photo.is_favorite);
-  const [status, setStatus] = useState(photo.status);
   const [showCompare, setShowCompare] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     setIsFavorite(photo.is_favorite);
-    setStatus(photo.status);
-  }, [photo.is_favorite, photo.status]);
+  }, [photo.is_favorite]);
 
   const handleToggleFavorite = () => {
     const newState = !isFavorite;
@@ -53,36 +49,6 @@ export function PhotoCard({ photo, isOwner, isCover, watermark, onToggleFavorite
 
   const cancelDelete = () => {
     setShowDeleteConfirm(false);
-  };
-
-  const handleApprove = () => {
-    setStatus("approved");
-    onApprove?.(photo.id);
-  };
-
-  const handleReject = () => {
-    setStatus("rejected");
-    onReject?.(photo.id);
-  };
-
-  const statusBadge = () => {
-    if (status === "approved") {
-      return (
-        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-green-600/90 px-2 py-0.5 text-[10px] font-bold text-white shadow-md">
-          <i className="ri-check-line text-xs" />
-          Disetujui
-        </span>
-      );
-    }
-    if (status === "rejected") {
-      return (
-        <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] font-bold text-white shadow-md">
-          <i className="ri-close-line text-xs" />
-          Ditolak
-        </span>
-      );
-    }
-    return null;
   };
 
   return (
@@ -126,20 +92,12 @@ export function PhotoCard({ photo, isOwner, isCover, watermark, onToggleFavorite
           </button>
         )}
 
-        {status === "approved" && isCover && (
-          <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-green-600/90 px-2 py-0.5 text-[10px] font-bold text-white shadow-md">
-            <i className="ri-check-line text-xs" />
-            Cover
-          </span>
-        )}
-        {status !== "approved" && isCover && (
+        {isCover && (
           <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-[#65195E]/90 px-2 py-0.5 text-[10px] font-bold text-white shadow-md">
             <i className="ri-image-edit-line text-xs" />
             Cover
           </span>
         )}
-
-        {!isCover && statusBadge()}
 
         <button
           type="button"
@@ -164,28 +122,6 @@ export function PhotoCard({ photo, isOwner, isCover, watermark, onToggleFavorite
             <i className="ri-arrow-left-right-line text-sm" />
             <span className="hidden sm:inline">Bandingkan</span>
           </button>
-        )}
-
-        {/* Approval buttons — only for clients */}
-        {!isOwner && status === "pending" && (
-          <div className="absolute inset-x-0 bottom-0 flex gap-1 p-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
-              type="button"
-              onClick={handleApprove}
-              className="flex flex-1 items-center justify-center gap-1 rounded-md bg-green-600 py-1.5 text-[11px] font-bold text-white shadow-sm transition hover:bg-green-700 active:scale-95"
-            >
-              <i className="ri-check-line text-xs" />
-              Setuju
-            </button>
-            <button
-              type="button"
-              onClick={handleReject}
-              className="flex flex-1 items-center justify-center gap-1 rounded-md bg-red-600 py-1.5 text-[11px] font-bold text-white shadow-sm transition hover:bg-red-700 active:scale-95"
-            >
-              <i className="ri-close-line text-xs" />
-              Tolak
-            </button>
-          </div>
         )}
 
         {/* Watermark overlay — only for clients */}

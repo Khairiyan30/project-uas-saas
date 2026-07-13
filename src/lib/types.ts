@@ -28,23 +28,6 @@ export interface Project {
   watermark_size?: number;
 }
 
-export interface Comment {
-  id: string;
-  photo_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  user?: {
-    id: string;
-    full_name: string;
-    avatar_url: string | null;
-    role: string;
-  };
-}
-
-export type PhotoStatus = "pending" | "approved" | "rejected";
-
 export interface Photo {
   id: string;
   project_id: string;
@@ -52,7 +35,6 @@ export interface Photo {
   url_edited: string | null;
   filename: string;
   is_favorite: boolean;
-  status: PhotoStatus;
   created_at: string;
 }
 

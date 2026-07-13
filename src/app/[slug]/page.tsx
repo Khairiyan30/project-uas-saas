@@ -27,7 +27,7 @@ export default function GalleryPage() {
   // State untuk mode akses
   const [isOwner, setIsOwner] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "favorites" | "approved" | "rejected">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "favorites">("all");
   
   // State untuk edit detail proyek
   const [isEditing, setIsEditing] = useState(false);
@@ -342,60 +342,6 @@ export default function GalleryPage() {
     }
   };
 
-  // Handle approve foto
-  const handleApprovePhoto = async (photoId: string) => {
-    setPhotos((prev) =>
-      prev.map((p) => (p.id === photoId ? { ...p, status: "approved" as const } : p))
-    );
-    const token = localStorage.getItem("sb-access-token");
-    try {
-      const res = await fetch(`/api/photos/${photoId}/approval`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: "approved" }),
-      });
-      if (!res.ok) {
-        setPhotos((prev) =>
-          prev.map((p) => (p.id === photoId ? { ...p, status: "pending" as const } : p))
-        );
-      }
-    } catch {
-      setPhotos((prev) =>
-        prev.map((p) => (p.id === photoId ? { ...p, status: "pending" as const } : p))
-      );
-    }
-  };
-
-  // Handle reject foto
-  const handleRejectPhoto = async (photoId: string) => {
-    setPhotos((prev) =>
-      prev.map((p) => (p.id === photoId ? { ...p, status: "rejected" as const } : p))
-    );
-    const token = localStorage.getItem("sb-access-token");
-    try {
-      const res = await fetch(`/api/photos/${photoId}/approval`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: "rejected" }),
-      });
-      if (!res.ok) {
-        setPhotos((prev) =>
-          prev.map((p) => (p.id === photoId ? { ...p, status: "pending" as const } : p))
-        );
-      }
-    } catch {
-      setPhotos((prev) =>
-        prev.map((p) => (p.id === photoId ? { ...p, status: "pending" as const } : p))
-      );
-    }
-  };
-
   // State untuk modal detail foto
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
@@ -435,35 +381,6 @@ export default function GalleryPage() {
     }
   };
 
-  // Handle finalisasi kurasi
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  const handleFinalizeCuration = async () => {
-    if (!project) return;
-    setIsFinalizing(true);
-    const token = localStorage.getItem("sb-access-token");
-    try {
-      const res = await fetch(`/api/projects/${project.id}/curation`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setProject((prev) => prev ? { ...prev, progress_status: "Selesai" } : prev);
-        setPhotos((prev) =>
-          prev.map((p) => (p.status === "pending" ? { ...p, status: "approved" as const } : p))
-        );
-      } else {
-        alert(data.error || "Gagal finalisasi kurasi");
-      }
-    } catch {
-      alert("Terjadi kesalahan koneksi");
-    } finally {
-      setIsFinalizing(false);
-    }
-  };
-
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F8F8F8]">
@@ -497,12 +414,7 @@ export default function GalleryPage() {
   // Filter foto berdasarkan tab pilihan
   const displayedPhotos = activeTab === "all"
     ? photos
-    : activeTab === "favorites"
-    ? photos.filter(p => p.is_favorite)
-    : photos.filter(p => p.status === activeTab);
-
-  const approvedCount = photos.filter(p => p.status === "approved").length;
-  const rejectedCount = photos.filter(p => p.status === "rejected").length;
+    : photos.filter(p => p.is_favorite);
 
   return (
     <main className="min-h-screen bg-[#F8F8F8]">
@@ -687,38 +599,8 @@ export default function GalleryPage() {
               >
                 Pilihan Klien ({photos.filter(p => p.is_favorite).length})
               </button>
-              <button
-                onClick={() => setActiveTab("approved")}
-                className={`border-b-2 px-4 py-2 text-xs font-bold transition-all ${
-                  activeTab === "approved"
-                    ? "border-green-600 text-green-600"
-                    : "border-transparent text-gray-400 hover:text-gray-600"
-                }`}
-              >
-                <i className="ri-check-line text-xs" /> Disetujui ({approvedCount})
-              </button>
-              <button
-                onClick={() => setActiveTab("rejected")}
-                className={`border-b-2 px-4 py-2 text-xs font-bold transition-all ${
-                  activeTab === "rejected"
-                    ? "border-red-600 text-red-600"
-                    : "border-transparent text-gray-400 hover:text-gray-600"
-                }`}
-              >
-                <i className="ri-close-line text-xs" /> Ditolak ({rejectedCount})
-              </button>
             </div>
-            {isClient && project.progress_status === "Tahap Kurasi Klien" && (
-              <button
-                onClick={handleFinalizeCuration}
-                disabled={isFinalizing}
-                className="flex items-center gap-1.5 rounded-lg bg-[#65195E] px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#91157E] disabled:opacity-50 active:scale-95"
-              >
-                <i className="ri-check-double-line" />
-                {isFinalizing ? "Memproses…" : "Selesai Kurasi"}
-              </button>
-            )}
-            {isClient && approvedCount > 0 && (
+            {isClient && photos.length > 0 && (
               <button
                 onClick={handleDownloadZip}
                 disabled={downloading}
@@ -729,7 +611,7 @@ export default function GalleryPage() {
                 ) : (
                   <i className="ri-download-2-line" />
                 )}
-                {downloading ? "Mempersiapkan…" : `Download ${approvedCount} Foto`}
+                {downloading ? "Mempersiapkan…" : `Download ${photos.length} Foto`}
               </button>
             )}
           </div>
@@ -769,8 +651,6 @@ export default function GalleryPage() {
                   onToggleFavorite={handleToggleFavorite}
                   onSetCover={handleSetCover}
                   onDelete={handleDeletePhoto}
-                  onApprove={handleApprovePhoto}
-                  onReject={handleRejectPhoto}
                 />
               </div>
             ))}
@@ -874,7 +754,6 @@ export default function GalleryPage() {
       {selectedPhoto && (
         <PhotoDetailModal
           photo={selectedPhoto}
-          isOwner={isOwner}
           onClose={() => setSelectedPhoto(null)}
         />
       )}

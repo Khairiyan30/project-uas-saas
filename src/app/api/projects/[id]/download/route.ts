@@ -49,14 +49,10 @@ export async function GET(
       );
     }
 
-    let query = supabase
+    const query = supabase
       .from("photos")
       .select("filename, url_original")
       .eq("project_id", id);
-
-    if (access.isClient) {
-      query = query.eq("status", "approved");
-    }
 
     const { data: photos, error: photosError } = await query.order("created_at", {
       ascending: true,

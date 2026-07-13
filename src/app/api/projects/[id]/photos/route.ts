@@ -39,24 +39,11 @@ export async function GET(
       );
     }
 
-    let { data: photos, error } = await supabase
+    const { data: photos, error } = await supabase
       .from("photos")
-      .select(
-        "id, project_id, url_original, url_edited, filename, is_favorite, status, created_at"
-      )
+      .select("id, project_id, url_original, url_edited, filename, is_favorite, created_at")
       .eq("project_id", id)
       .order("created_at", { ascending: true });
-
-    if (error && error.code === "42703") {
-      // Kolom status belum ada — fallback
-      const fallback = await supabase
-        .from("photos")
-        .select("id, project_id, url_original, url_edited, filename, is_favorite, created_at")
-        .eq("project_id", id)
-        .order("created_at", { ascending: true });
-      photos = fallback.data?.map(p => ({ ...p, status: "pending" })) ?? [];
-      error = fallback.error;
-    }
 
     if (error) {
       console.error("Error fetching photos:", error);

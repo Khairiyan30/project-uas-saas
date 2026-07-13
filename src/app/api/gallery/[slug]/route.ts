@@ -40,22 +40,11 @@ export async function GET(
     }
 
     // Ambil daftar foto
-    let { data: photos, error: photosError } = await supabase
+    const { data: photos, error: photosError } = await supabase
       .from("photos")
-      .select("id, project_id, url_original, url_edited, filename, is_favorite, status, created_at")
+      .select("id, project_id, url_original, url_edited, filename, is_favorite, created_at")
       .eq("project_id", project.id)
       .order("created_at", { ascending: true });
-
-    if (photosError && photosError.code === "42703") {
-      // Kolom status belum ada di database — fallback tanpa status
-      const fallback = await supabase
-        .from("photos")
-        .select("id, project_id, url_original, url_edited, filename, is_favorite, created_at")
-        .eq("project_id", project.id)
-        .order("created_at", { ascending: true });
-      photos = fallback.data?.map(p => ({ ...p, status: "pending" })) ?? [];
-      photosError = fallback.error;
-    }
 
     if (photosError) {
       console.error("Error fetching photos:", photosError);
