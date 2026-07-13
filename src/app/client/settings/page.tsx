@@ -161,7 +161,7 @@ export default function ClientSettingsPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="fullName" className="mb-1.5 block text-xs font-semibold text-gray-700">
-                  Nama Lengkap
+                  Nama Klien
                 </label>
                 <input
                   id="fullName"
