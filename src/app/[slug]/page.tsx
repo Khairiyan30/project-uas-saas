@@ -16,7 +16,7 @@ const STEPS = ["Persiapan", "Uploading", "Proses Edit", "Menunggu Review", "Taha
 export default function GalleryPage() {
   const params = useParams();
   const router = useRouter();
-  const { user: loggedInUser } = useAuth();
+  const { user: loggedInUser, isLoading: authLoading } = useAuth();
   const slug = params.slug as string;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -381,12 +381,55 @@ export default function GalleryPage() {
     }
   };
 
-  if (loading) {
+  // Auth loading — show spinner
+  if (authLoading || loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F8F8F8]">
         <div className="flex items-center gap-3">
           <i className="ri-loader-4-line animate-spin text-2xl text-gray-500" />
           <p className="text-sm text-gray-500 font-semibold">Memuat galeri proyek…</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Project ditemukan tapi user belum login — minta login dulu
+  const needsAuth = project && !loggedInUser;
+  if (needsAuth) {
+    const galleryUrl = typeof window !== "undefined" ? window.location.href : `/${slug}`;
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-[#F8F8F8] px-4 py-12">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl shadow-md">
+            <img src="/logo.png" alt="Shootlink Logo" className="h-full w-full object-cover" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 font-serif">
+            {project.name}
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">
+            Galeri ini dilindungi. Masuk untuk melihat dan mengunduh foto.
+          </p>
+
+          <div className="mt-8 space-y-3">
+            <Link
+              href={`/login?role=photographer`}
+              className="flex items-center justify-center gap-2 rounded-xl border border-[#65195E]/20 bg-[#65195E] px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#91157E] hover:shadow-md active:scale-[0.98]"
+            >
+              <i className="ri-camera-line" />
+              Masuk sebagai Fotografer / Studio
+            </Link>
+            <Link
+              href={`/login?role=client`}
+              className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-bold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:shadow-md active:scale-[0.98]"
+            >
+              <i className="ri-user-heart-line" />
+              Masuk sebagai Klien
+            </Link>
+          </div>
+
+          <p className="mt-6 text-xs text-gray-400">
+            Punya tautan ini? Fotografer atau klien yang terdaftar dapat mengakses galeri setelah masuk.
+          </p>
         </div>
       </main>
     );
