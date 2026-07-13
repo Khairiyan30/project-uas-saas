@@ -1,13 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { validateEmail, validatePassword } from "@/lib/auth-validation";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const role = searchParams.get("role");
+  const isClientRole = role === "client";
+
+  const roleLabel = useMemo(() => isClientRole ? "Klien" : "Fotografer / Studio", [isClientRole]);
+  const roleDesc = useMemo(
+    () => isClientRole
+      ? "Masuk ke akun klien Anda untuk melihat galeri proyek."
+      : "Gunakan akun fotografer profesional Anda.",
+    [isClientRole]
+  );
+
   const { login: authLogin } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -79,8 +91,8 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
-          <h2 className="text-base font-bold text-gray-900">Log In</h2>
-          <p className="mt-1 text-xs text-gray-400">Gunakan akun fotografer profesional Anda.</p>
+          <h2 className="text-base font-bold text-gray-900">Log In — {roleLabel}</h2>
+          <p className="mt-1 text-xs text-gray-400">{roleDesc}</p>
 
           {error && (
             <div className="mt-4 rounded-lg bg-red-50 p-3 text-xs text-red-600">
@@ -161,5 +173,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -21,11 +21,6 @@ export function ClientSidebar() {
       icon: <div className="h-5 w-5 bg-current" style={{ maskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/System/dashboard-line.svg)', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/System/dashboard-line.svg)', WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center' }} />,
     },
     {
-      name: "Proyek Saya",
-      href: "/client/projects",
-      icon: <div className="h-5 w-5 bg-current" style={{ maskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Document/folders-line.svg)', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Document/folders-line.svg)', WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center' }} />,
-    },
-    {
       name: "Pengaturan",
       href: "/client/settings",
       icon: <div className="h-5 w-5 bg-current" style={{ maskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/User%20%26%20Faces/user-settings-line.svg)', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/User%20%26%20Faces/user-settings-line.svg)', WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center' }} />,
@@ -65,8 +60,6 @@ export function ClientSidebar() {
           let isActive = pathname === item.href || (item.href !== "/client" && pathname.startsWith(item.href));
           if (item.name === "Dasbor") {
             isActive = pathname === "/client/dashboard";
-          } else if (item.name === "Proyek Saya") {
-            isActive = pathname === "/client/projects" || pathname.startsWith("/client/projects/");
           } else if (item.name === "Pengaturan") {
             isActive = pathname === "/client/settings";
           }
