@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   validateEmail,
   validatePassword,
@@ -11,8 +11,25 @@ import {
 } from "@/lib/auth-validation";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function SignUpPage() {
+function SignUpContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const role = searchParams.get("role");
+  const isClientRole = role === "client";
+
+  const roleLabel = useMemo(() => isClientRole ? "Klien" : "Fotografer / Studio", [isClientRole]);
+  const nameLabel = useMemo(() => isClientRole ? "Nama Lengkap" : "Nama Fotografer / Studio", [isClientRole]);
+  const descText = useMemo(
+    () => isClientRole
+      ? "Buat akun klien Anda untuk melihat galeri proyek dari fotografer."
+      : "Buat akun studio Anda untuk mulai mengunggah proyek.",
+    [isClientRole]
+  );
+  const headingText = useMemo(
+    () => isClientRole ? "Daftar Akun Klien" : "Daftar Akun Fotografer",
+    [isClientRole]
+  );
+
   const { login: authLogin } = useAuth();
   const [form, setForm] = useState({
     fullName: "",
@@ -55,6 +72,7 @@ export default function SignUpPage() {
           email: form.email,
           password: form.password,
           fullName: form.fullName,
+          role: isClientRole ? "client" : "photographer",
         }),
       });
 
@@ -86,7 +104,7 @@ export default function SignUpPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden shadow-sm">
             <img src="/logo.png" alt="Shootlink Logo" className="h-full w-full object-cover" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 font-serif">Daftar Akun Shootlink</h1>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 font-serif">{headingText}</h1>
           <p className="mt-1.5 text-sm text-gray-500">
             Platform modern untuk client gallery & proofing.
           </p>
@@ -94,8 +112,8 @@ export default function SignUpPage() {
 
         {/* Card */}
         <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
-          <h2 className="text-base font-bold text-gray-900">Registrasi</h2>
-          <p className="mt-1 text-xs text-gray-400">Buat akun studio Anda untuk mulai mengunggah proyek.</p>
+          <h2 className="text-base font-bold text-gray-900">Registrasi — {roleLabel}</h2>
+          <p className="mt-1 text-xs text-gray-400">{descText}</p>
 
           {error && (
             <div className="mt-4 rounded-lg bg-red-50 p-3 text-xs text-red-600">
@@ -107,7 +125,7 @@ export default function SignUpPage() {
             {/* Nama Lengkap */}
             <div>
               <label htmlFor="fullName" className="mb-1.5 block text-xs font-semibold text-gray-700">
-                Nama Fotografer / Studio
+                {nameLabel}
               </label>
               <input
                 id="fullName"
@@ -213,5 +231,13 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignUpContent />
+    </Suspense>
   );
 }

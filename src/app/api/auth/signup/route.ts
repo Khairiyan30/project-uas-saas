@@ -18,7 +18,7 @@ function getSupabase() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, fullName } = body;
+    const { email, password, fullName, role } = body;
 
     if (!email || !password || !fullName) {
       return NextResponse.json(
@@ -27,13 +27,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const finalRole = role === "client" ? "client" : "photographer";
+
     const supabase = getSupabase();
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName.trim() },
+        data: { full_name: fullName.trim(), role: finalRole },
         emailRedirectTo: `${request.nextUrl.origin}/login`,
       },
     });

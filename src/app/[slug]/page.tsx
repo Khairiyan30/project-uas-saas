@@ -427,8 +427,14 @@ export default function GalleryPage() {
             </Link>
           </div>
 
-          <p className="mt-6 text-xs text-gray-400">
-            Punya tautan ini? Fotografer atau klien yang terdaftar dapat mengakses galeri setelah masuk.
+          <p className="mt-5 text-xs text-gray-400">
+            Belum punya akun klien?{" "}
+            <Link href="/signup?role=client" className="font-bold text-[#65195E] hover:underline">
+              Daftar di sini
+            </Link>
+          </p>
+          <p className="mt-2 text-xs text-gray-400">
+            Fotografer atau klien yang terdaftar dapat mengakses galeri setelah masuk.
           </p>
         </div>
       </main>

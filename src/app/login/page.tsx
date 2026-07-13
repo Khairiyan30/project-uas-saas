@@ -159,7 +159,7 @@ function LoginContent() {
 
           <p className="mt-6 text-center text-xs text-gray-500">
             Belum punya akun?{" "}
-            <Link href="/signup" className="font-bold text-[#65195E] hover:underline">
+            <Link href={`/signup${role ? `?role=${role}` : ""}`} className="font-bold text-[#65195E] hover:underline">
               Daftar Sekarang
             </Link>
           </p>
