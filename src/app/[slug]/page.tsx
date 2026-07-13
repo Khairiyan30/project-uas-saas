@@ -50,8 +50,11 @@ export default function GalleryPage() {
     setLoading(true);
     setError("");
     try {
-      // Ambil data proyek secara publik via slug
-      const res = await fetch(`/api/gallery/${slug}`);
+      // Ambil data proyek secara publik via slug (sertakan token jika login)
+      const token = typeof window !== "undefined" ? localStorage.getItem("sb-access-token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/gallery/${slug}`, { headers });
       const data = await res.json();
 
       if (!res.ok) {
