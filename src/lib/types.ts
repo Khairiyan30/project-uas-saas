@@ -1,3 +1,14 @@
+export type UserRole = 'photographer' | 'client' | 'admin';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  fullName: string;
+  avatarUrl: string | null;
+  role: UserRole;
+  plan?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -11,7 +22,28 @@ export interface Project {
   favorite_count: number;
   revision_count: number;
   progress_percent?: number;
+  watermark_url?: string | null;
+  watermark_position?: string;
+  watermark_opacity?: number;
+  watermark_size?: number;
 }
+
+export interface Comment {
+  id: string;
+  photo_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+    role: string;
+  };
+}
+
+export type PhotoStatus = "pending" | "approved" | "rejected";
 
 export interface Photo {
   id: string;
@@ -20,7 +52,16 @@ export interface Photo {
   url_edited: string | null;
   filename: string;
   is_favorite: boolean;
+  status: PhotoStatus;
   created_at: string;
+}
+
+export interface ProjectClient {
+  project_id: string;
+  client_id: string;
+  invited_at: string;
+  accepted_at: string | null;
+  client?: UserProfile;
 }
 
 export interface UploadQueueItem {
@@ -42,4 +83,6 @@ export interface ProjectsResponse extends ApiResponse {
 export interface GalleryResponse extends ApiResponse {
   project: Project;
   photos: Photo[];
+  isOwner?: boolean;
+  isClient?: boolean;
 }

@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase";
+import { verifySession } from "@/lib/session";
+import { canAccessProject } from "@/lib/authz";
 
 /**
  * GET /api/gallery/[slug]
  *
  * Endpoint publik untuk mengambil data galeri proyek berdasarkan unique_slug.
- * Klien mengakses galeri tanpa login via URL ini.
- *
- * Mengembalikan detail proyek + daftar foto.
+ * Mengembalikan detail proyek, daftar foto, dan status akses user.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const { slug } = await params;
 
-    // Validasi slug minimal
     if (!slug || typeof slug !== "string" || slug.trim().length < 3) {
       return NextResponse.json(
         { error: "Slug tidak valid" },
@@ -29,7 +28,7 @@ export async function GET(
     // Ambil data proyek
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, name, event_type, description, progress_status, unique_slug, created_at, cover_photo_url")
+      .select("id, user_id, name, event_type, description, progress_status, unique_slug, created_at, cover_photo_url, watermark_url, watermark_position, watermark_opacity, watermark_size")
       .eq("unique_slug", slug.trim())
       .single();
 
@@ -40,12 +39,23 @@ export async function GET(
       );
     }
 
-    // Ambil daftar foto di proyek
-    const { data: photos, error: photosError } = await supabase
+    // Ambil daftar foto
+    let { data: photos, error: photosError } = await supabase
       .from("photos")
-      .select("id, project_id, url_original, url_edited, filename, is_favorite, created_at")
+      .select("id, project_id, url_original, url_edited, filename, is_favorite, status, created_at")
       .eq("project_id", project.id)
       .order("created_at", { ascending: true });
+
+    if (photosError && photosError.code === "42703") {
+      // Kolom status belum ada di database — fallback tanpa status
+      const fallback = await supabase
+        .from("photos")
+        .select("id, project_id, url_original, url_edited, filename, is_favorite, created_at")
+        .eq("project_id", project.id)
+        .order("created_at", { ascending: true });
+      photos = fallback.data?.map(p => ({ ...p, status: "pending" })) ?? [];
+      photosError = fallback.error;
+    }
 
     if (photosError) {
       console.error("Error fetching photos:", photosError);
@@ -55,10 +65,28 @@ export async function GET(
       );
     }
 
+    // Cek akses user (jika login)
+    let isOwner = false;
+    let isClient = false;
+
+    try {
+      const authHeader = request.headers.get("Authorization");
+      if (authHeader) {
+        const { user } = await verifySession(authHeader);
+        const access = await canAccessProject(supabase, project.id, user.id);
+        isOwner = access.isOwner;
+        isClient = access.isClient;
+      }
+    } catch {
+      // Tidak login → anon
+    }
+
     return NextResponse.json(
       {
         project,
         photos: photos ?? [],
+        isOwner,
+        isClient,
       },
       { status: 200 }
     );

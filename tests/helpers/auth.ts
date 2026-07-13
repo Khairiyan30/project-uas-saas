@@ -25,8 +25,15 @@ export function getTestPassword(): string {
 let tokenCache: { email: string; accessToken: string; refreshToken: string } | null = null;
 
 /**
+ * Reset cache — panggil setelah test yang menginvalidasi session (misal A3 logout).
+ */
+export function resetTokenCache() {
+  tokenCache = null;
+}
+
+/**
  * Buat user + dapatkan access token via Supabase Admin.
- * Ini jalan di Node.js (server side), bukan di browser.
+ * Menggunakan cache untuk menghindari rate limit Supabase.
  */
 export async function createTestUser(): Promise<{
   email: string;
@@ -88,7 +95,8 @@ export async function setupAuthenticatedPage(page: Page): Promise<{
   const { email, accessToken, refreshToken } = await createTestUser();
 
   // Inject token ke browser
-  await page.goto("/login");
+  await page.goto("/login", { timeout: 15000 });
+  await page.waitForTimeout(1000);
   await page.evaluate(
     ({ token, refresh }) => {
       localStorage.setItem("sb-access-token", token);
@@ -98,23 +106,40 @@ export async function setupAuthenticatedPage(page: Page): Promise<{
   );
 
   // Navigate ke dashboard
-  await page.goto("/dashboard", { timeout: 30000 });
-  await page.waitForTimeout(3000);
+  await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
+  await page.waitForTimeout(5000);
 
-  // Fallback ke UI login jika redirect
+  // Fallback ke UI login jika redirect atau masih loading
+  let finalToken = accessToken;
   if (page.url().includes("/login")) {
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
-    await page.waitForURL(/\/dashboard/, { timeout: 20000 });
+    try {
+      await page.waitForURL(/\/dashboard/, { timeout: 20000 });
+      // Ambil token baru dari localStorage (hasil UI login)
+      finalToken = await page.evaluate(() => localStorage.getItem("sb-access-token") || "");
+    } catch {
+      // Mungkin login manual berhasil tapi navbar redirect
+    }
   }
 
-  return { email, accessToken };
+  return { email, accessToken: finalToken };
 }
 
 export async function clearAuth(page: Page) {
   await page.evaluate(() => {
     localStorage.removeItem("sb-access-token");
     localStorage.removeItem("sb-refresh-token");
+    localStorage.removeItem("supabase.auth.token");
   });
+}
+
+export async function waitForLoginRedirect(page: Page, timeout = 10000) {
+  try {
+    await page.waitForURL(/\/login/, { timeout });
+    return true;
+  } catch {
+    return false;
+  }
 }

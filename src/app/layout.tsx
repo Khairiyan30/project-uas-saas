@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "Shootlink | Client Gallery & Proofing",
@@ -25,6 +26,7 @@ export default function RootLayout({
         <AuthProvider>
           <ErrorBoundary>
             {children}
+            <Analytics />
           </ErrorBoundary>
         </AuthProvider>
       </body>

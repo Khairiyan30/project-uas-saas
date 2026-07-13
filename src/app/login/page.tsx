@@ -52,7 +52,11 @@ export default function LoginPage() {
         await authLogin(data.session.access_token, data.session.refresh_token);
       }
 
-      router.push("/dashboard");
+      if (data.user?.role === "client") {
+        router.push("/client");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError("Terjadi kesalahan. Coba lagi.");
       setIsLoading(false);
@@ -147,6 +151,13 @@ export default function LoginPage() {
               Daftar Sekarang
             </Link>
           </p>
+
+          {/* Legal Links */}
+          <div className="mt-6 flex items-center justify-center gap-4 border-t border-gray-50 pt-4 text-[10px] text-gray-400">
+            <Link href="/tos" className="hover:text-gray-600 transition-colors">Syarat & Ketentuan</Link>
+            <Link href="/privacy" className="hover:text-gray-600 transition-colors">Kebijakan Privasi</Link>
+            <Link href="/cookies" className="hover:text-gray-600 transition-colors">Cookie</Link>
+          </div>
         </div>
       </div>
     </div>

@@ -86,6 +86,27 @@ export default function ProyekPage() {
     );
   };
 
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      const token = localStorage.getItem("sb-access-token");
+      if (!token) return;
+
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      } else {
+        const data = await res.json();
+        alert(data.error || "Gagal menghapus proyek");
+      }
+    } catch {
+      alert("Terjadi kesalahan koneksi saat menghapus proyek");
+    }
+  };
+
   // Filter & search
   const filteredProjects = sortedProjects.filter((p) => {
     const matchesFilter = !activeFilter || p.progress_status === activeFilter;
@@ -249,11 +270,11 @@ export default function ProyekPage() {
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {filteredProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard key={project.id} project={project} onDelete={handleDeleteProject} />
               ))}
             </div>
           ) : (
-            <ProjectTable projects={filteredProjects} />
+            <ProjectTable projects={filteredProjects} onDelete={handleDeleteProject} />
           )}
         </div>
       </div>

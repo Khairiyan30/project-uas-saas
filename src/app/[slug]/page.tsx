@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { PhotoCard } from "@/components/PhotoCard";
+import { PhotoDetailModal } from "@/components/PhotoDetailModal";
+import { WatermarkSettings } from "@/components/WatermarkSettings";
+import { InviteClientModal } from "@/components/InviteClientModal";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Project, Photo, UploadQueueItem } from "@/lib/types";
 
@@ -21,10 +24,10 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // State untuk mode Admin/Fotografer
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoggedInPhotographer, setIsLoggedInPhotographer] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "favorites">("all");
+  // State untuk mode akses
+  const [isOwner, setIsOwner] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | "favorites" | "approved" | "rejected">("all");
   
   // State untuk edit detail proyek
   const [isEditing, setIsEditing] = useState(false);
@@ -38,6 +41,9 @@ export default function GalleryPage() {
 
   // Copy status
   const [copied, setCopied] = useState(false);
+
+  // State untuk invite client
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Fetch project detail & photos
   const fetchProjectData = useCallback(async () => {
@@ -62,15 +68,8 @@ export default function GalleryPage() {
         description: data.project.description || "",
       });
 
-      // Cek apakah ada token login di browser
-      const token = localStorage.getItem("sb-access-token");
-      if (token) {
-        setIsLoggedInPhotographer(true);
-        setIsAdmin(true); // Selama fotografer login, aktifkan admin toolbar untuk proyek ini
-      } else {
-        setIsLoggedInPhotographer(false);
-        setIsAdmin(false);
-      }
+      setIsOwner(data.isOwner || false);
+      setIsClient(data.isClient || false);
     } catch (err) {
       setError("Terjadi kesalahan server");
     } finally {
@@ -84,7 +83,7 @@ export default function GalleryPage() {
 
   // Handle progress status change
   const handleProgressChange = async (newStatus: string) => {
-    if (!project || !isAdmin) return;
+    if (!project || !isOwner) return;
 
     try {
       const token = localStorage.getItem("sb-access-token");
@@ -112,7 +111,7 @@ export default function GalleryPage() {
   // Handle save detail proyek
   const handleSaveDetail = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!project || !isAdmin) return;
+    if (!project || !isOwner) return;
 
     setIsSavingDetail(true);
     try {
@@ -152,7 +151,7 @@ export default function GalleryPage() {
   // Handle file upload dengan validasi client-side
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0 || !project || !isAdmin) return;
+    if (!files || files.length === 0 || !project || !isOwner) return;
 
     const fileList = Array.from(files);
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
@@ -175,10 +174,15 @@ export default function GalleryPage() {
     setUploadError("");
 
     const token = localStorage.getItem("sb-access-token");
+    if (!token && fileList.length > 0) return;
 
     // Siapkan upload queue state
     const newQueue = fileList.map(f => ({ name: f.name, progress: 0, status: "waiting" as const }));
     setUploadQueue(newQueue);
+
+    // Refresh token helper — baca ulang dari localStorage setiap kali
+    // (supaya tidak expired saat upload banyak file berurutan)
+    const getToken = () => localStorage.getItem("sb-access-token");
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
@@ -192,10 +196,15 @@ export default function GalleryPage() {
       formData.append("file", file);
 
       try {
+        const t = getToken();
+        if (!t) {
+          setUploadError("Sesi login habis. Silakan refresh halaman.");
+          break;
+        }
         const res = await fetch(`/api/projects/${project.id}/photos`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${t}`,
           },
           body: formData,
         });
@@ -330,6 +339,128 @@ export default function GalleryPage() {
     }
   };
 
+  // Handle approve foto
+  const handleApprovePhoto = async (photoId: string) => {
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === photoId ? { ...p, status: "approved" as const } : p))
+    );
+    const token = localStorage.getItem("sb-access-token");
+    try {
+      const res = await fetch(`/api/photos/${photoId}/approval`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "approved" }),
+      });
+      if (!res.ok) {
+        setPhotos((prev) =>
+          prev.map((p) => (p.id === photoId ? { ...p, status: "pending" as const } : p))
+        );
+      }
+    } catch {
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === photoId ? { ...p, status: "pending" as const } : p))
+      );
+    }
+  };
+
+  // Handle reject foto
+  const handleRejectPhoto = async (photoId: string) => {
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === photoId ? { ...p, status: "rejected" as const } : p))
+    );
+    const token = localStorage.getItem("sb-access-token");
+    try {
+      const res = await fetch(`/api/photos/${photoId}/approval`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "rejected" }),
+      });
+      if (!res.ok) {
+        setPhotos((prev) =>
+          prev.map((p) => (p.id === photoId ? { ...p, status: "pending" as const } : p))
+        );
+      }
+    } catch {
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === photoId ? { ...p, status: "pending" as const } : p))
+      );
+    }
+  };
+
+  // State untuk modal detail foto
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+
+  // State untuk modal watermark
+  const [showWatermark, setShowWatermark] = useState(false);
+
+  // State untuk download
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadZip = async () => {
+    if (!project || downloading) return;
+    setDownloading(true);
+    const token = localStorage.getItem("sb-access-token");
+    try {
+      const res = await fetch(`/api/projects/${project.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Gagal mengunduh");
+        setDownloading(false);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${project.name.toLowerCase().replace(/\s+/g, "-")}-foto.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Gagal mengunduh file");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Handle finalisasi kurasi
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const handleFinalizeCuration = async () => {
+    if (!project) return;
+    setIsFinalizing(true);
+    const token = localStorage.getItem("sb-access-token");
+    try {
+      const res = await fetch(`/api/projects/${project.id}/curation`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setProject((prev) => prev ? { ...prev, progress_status: "Selesai" } : prev);
+        setPhotos((prev) =>
+          prev.map((p) => (p.status === "pending" ? { ...p, status: "approved" as const } : p))
+        );
+      } else {
+        alert(data.error || "Gagal finalisasi kurasi");
+      }
+    } catch {
+      alert("Terjadi kesalahan koneksi");
+    } finally {
+      setIsFinalizing(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F8F8F8]">
@@ -360,15 +491,20 @@ export default function GalleryPage() {
     );
   }
 
-  // Filter foto berdasarkan tab pilihan klien
+  // Filter foto berdasarkan tab pilihan
   const displayedPhotos = activeTab === "all"
     ? photos
-    : photos.filter(p => p.is_favorite);
+    : activeTab === "favorites"
+    ? photos.filter(p => p.is_favorite)
+    : photos.filter(p => p.status === activeTab);
+
+  const approvedCount = photos.filter(p => p.status === "approved").length;
+  const rejectedCount = photos.filter(p => p.status === "rejected").length;
 
   return (
     <main className="min-h-screen bg-[#F8F8F8]">
       {/* ── Admin Toolbar (Hanya untuk pemilik proyek yang login untuk edit/upload) ── */}
-      {isAdmin && (
+      {isOwner && (
         <div className="border-b border-[#65195E]/10 bg-white px-4 py-3 sm:px-6 lg:px-8 shadow-sm">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-end gap-4">
             {/* Quick Actions (Upload & Copy Link) */}
@@ -380,6 +516,15 @@ export default function GalleryPage() {
               >
                 <i className={copied ? "ri-checkbox-circle-line text-emerald-500" : "ri-file-copy-2-line"} />
                 {copied ? "Tersalin!" : "Salin Tautan Klien"}
+              </button>
+
+              {/* Invite Client */}
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-[#65195E]/30 bg-white px-3.5 py-1.5 text-xs font-bold text-[#65195E] transition hover:bg-[#65195E]/5 active:scale-95"
+              >
+                <i className="ri-user-add-line" />
+                Undang Klien
               </button>
 
               {/* Progress dropdown */}
@@ -406,6 +551,29 @@ export default function GalleryPage() {
                 Edit Detail
               </button>
 
+              {/* Watermark */}
+              <button
+                onClick={() => setShowWatermark(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3.5 py-1.5 text-xs font-bold text-gray-600 transition hover:bg-gray-50 active:scale-95"
+              >
+                <i className="ri-copyright-line" />
+                Watermark
+              </button>
+
+              {/* Download ZIP */}
+              <button
+                onClick={handleDownloadZip}
+                disabled={downloading || photos.length === 0}
+                className="flex items-center gap-1.5 rounded-lg border border-[#65195E]/30 bg-white px-3.5 py-1.5 text-xs font-bold text-[#65195E] transition hover:bg-[#65195E]/5 disabled:opacity-40 active:scale-95"
+              >
+                {downloading ? (
+                  <i className="ri-loader-4-line animate-spin" />
+                ) : (
+                  <i className="ri-download-2-line" />
+                )}
+                {downloading ? "Mempersiapkan…" : `Download ZIP (${photos.length})`}
+              </button>
+
               {/* Upload Input */}
               <label className="flex items-center gap-1.5 rounded-lg bg-[#65195E] px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#91157E] cursor-pointer active:scale-95">
                 <i className="ri-upload-cloud-line" />
@@ -429,7 +597,7 @@ export default function GalleryPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
               <h1 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-                {isLoggedInPhotographer && (
+                {isOwner && (
                   <Link
                     href="/proyek"
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-400 transition-all duration-200 hover:bg-[#65195E] hover:text-white hover:scale-105 active:scale-95 shadow-sm"
@@ -461,7 +629,7 @@ export default function GalleryPage() {
       </header>
 
       {/* Upload Queue Progress */}
-      {isAdmin && uploadQueue.length > 0 && (
+      {isOwner && uploadQueue.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
           <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
             <h4 className="text-xs font-bold text-gray-900 mb-3 flex items-center gap-1.5">
@@ -491,30 +659,76 @@ export default function GalleryPage() {
         <ProgressIndicator projectId={project.id} currentStatus={project.progress_status} />
       </section>
 
-      {/* ── Filter Tabs Khusus Admin ── */}
-      {isAdmin && (
+      {/* ── Filter Tabs ── */}
+      {(isOwner || isClient) && (
         <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`border-b-2 px-4 py-2 text-xs font-bold transition-all ${
-                activeTab === "all"
-                  ? "border-[#65195E] text-[#65195E]"
-                  : "border-transparent text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              Semua Foto ({photos.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("favorites")}
-              className={`border-b-2 px-4 py-2 text-xs font-bold transition-all ${
-                activeTab === "favorites"
-                  ? "border-[#65195E] text-[#65195E]"
-                  : "border-transparent text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              Pilihan Klien ({photos.filter(p => p.is_favorite).length})
-            </button>
+          <div className="flex flex-wrap items-center justify-between border-b border-gray-200">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab("all")}
+                className={`border-b-2 px-4 py-2 text-xs font-bold transition-all ${
+                  activeTab === "all"
+                    ? "border-[#65195E] text-[#65195E]"
+                    : "border-transparent text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                Semua Foto ({photos.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("favorites")}
+                className={`border-b-2 px-4 py-2 text-xs font-bold transition-all ${
+                  activeTab === "favorites"
+                    ? "border-[#65195E] text-[#65195E]"
+                    : "border-transparent text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                Pilihan Klien ({photos.filter(p => p.is_favorite).length})
+              </button>
+              <button
+                onClick={() => setActiveTab("approved")}
+                className={`border-b-2 px-4 py-2 text-xs font-bold transition-all ${
+                  activeTab === "approved"
+                    ? "border-green-600 text-green-600"
+                    : "border-transparent text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                <i className="ri-check-line text-xs" /> Disetujui ({approvedCount})
+              </button>
+              <button
+                onClick={() => setActiveTab("rejected")}
+                className={`border-b-2 px-4 py-2 text-xs font-bold transition-all ${
+                  activeTab === "rejected"
+                    ? "border-red-600 text-red-600"
+                    : "border-transparent text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                <i className="ri-close-line text-xs" /> Ditolak ({rejectedCount})
+              </button>
+            </div>
+            {isClient && project.progress_status === "Tahap Kurasi Klien" && (
+              <button
+                onClick={handleFinalizeCuration}
+                disabled={isFinalizing}
+                className="flex items-center gap-1.5 rounded-lg bg-[#65195E] px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#91157E] disabled:opacity-50 active:scale-95"
+              >
+                <i className="ri-check-double-line" />
+                {isFinalizing ? "Memproses…" : "Selesai Kurasi"}
+              </button>
+            )}
+            {isClient && approvedCount > 0 && (
+              <button
+                onClick={handleDownloadZip}
+                disabled={downloading}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-1.5 text-xs font-bold text-gray-600 transition hover:bg-gray-50 disabled:opacity-40 active:scale-95"
+              >
+                {downloading ? (
+                  <i className="ri-loader-4-line animate-spin" />
+                ) : (
+                  <i className="ri-download-2-line" />
+                )}
+                {downloading ? "Mempersiapkan…" : `Download ${approvedCount} Foto`}
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -527,22 +741,35 @@ export default function GalleryPage() {
             <p className="text-sm font-semibold text-gray-400">
               {activeTab === "favorites" ? "Belum ada foto yang difavoritkan klien." : "Belum ada foto dalam proyek ini."}
             </p>
-            {isAdmin && activeTab === "all" && (
+            {isOwner && activeTab === "all" && (
               <p className="mt-1 text-xs text-gray-400">Silakan klik "Upload Foto" di atas untuk menambahkan foto pertama.</p>
             )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 animate-fadeIn">
             {displayedPhotos.map((photo) => (
-              <PhotoCard
+              <div
                 key={photo.id}
-                photo={photo}
-                isAdmin={isAdmin}
-                isCover={photo.url_original === project.cover_photo_url}
-                onToggleFavorite={handleToggleFavorite}
-                onSetCover={handleSetCover}
-                onDelete={handleDeletePhoto}
-              />
+                className="cursor-pointer"
+                onClick={() => setSelectedPhoto(photo)}
+              >
+                <PhotoCard
+                  photo={photo}
+                  isOwner={isOwner}
+                  isCover={photo.url_original === project.cover_photo_url}
+                  watermark={project.watermark_url ? {
+                    url: project.watermark_url,
+                    position: project.watermark_position ?? "bottom-right",
+                    opacity: project.watermark_opacity ?? 0.5,
+                    size: project.watermark_size ?? 15,
+                  } : null}
+                  onToggleFavorite={handleToggleFavorite}
+                  onSetCover={handleSetCover}
+                  onDelete={handleDeletePhoto}
+                  onApprove={handleApprovePhoto}
+                  onReject={handleRejectPhoto}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -623,6 +850,40 @@ export default function GalleryPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal Watermark */}
+      {showWatermark && project && (
+        <WatermarkSettings
+          projectId={project.id}
+          currentUrl={project.watermark_url ?? null}
+          currentPosition={project.watermark_position ?? "bottom-right"}
+          currentOpacity={project.watermark_opacity ?? 0.5}
+          currentSize={project.watermark_size ?? 15}
+          onClose={() => setShowWatermark(false)}
+          onSaved={() => {
+            fetchProjectData();
+          }}
+        />
+      )}
+
+      {/* Modal Detail Foto */}
+      {selectedPhoto && (
+        <PhotoDetailModal
+          photo={selectedPhoto}
+          isOwner={isOwner}
+          onClose={() => setSelectedPhoto(null)}
+        />
+      )}
+
+      {/* Modal Undang Klien */}
+      {project && (
+        <InviteClientModal
+          open={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          projectId={project.id}
+          onInvited={() => setShowInviteModal(false)}
+        />
       )}
     </main>
   );

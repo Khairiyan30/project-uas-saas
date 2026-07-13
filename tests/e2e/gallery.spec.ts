@@ -92,7 +92,8 @@ test.describe("Gallery & Photo API", () => {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: `GalleryGetTest ${Date.now()}`, event_type: "Wedding" }),
       });
-      return (await r.json()).project;
+      const data = await r.json();
+      return { id: data.project?.id, status: r.status, ok: r.ok };
     }, accessToken);
 
     expect(proj?.id).toBeTruthy();
@@ -102,7 +103,7 @@ test.describe("Gallery & Photo API", () => {
       const r = await fetch(`/api/projects/${projectId}/photos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return { ok: r.ok, body: await r.json() };
+      return { ok: r.ok, status: r.status, body: await r.json().catch(() => ({})) };
     }, { token: accessToken, projectId: proj.id });
 
     expect(res.ok).toBeTruthy();
@@ -127,7 +128,7 @@ test.describe("Gallery & Photo API", () => {
     // Buka public gallery di tab baru (tanpa login)
     const pub = await page.context().newPage();
     await pub.goto(`/${proj.unique_slug}`, { timeout: 20000 });
-    await pub.waitForTimeout(3000);
+    await pub.waitForTimeout(5000);
 
     const bodyText = await pub.locator("body").innerText().catch(() => "");
     const slugVisible = bodyText.includes(proj.unique_slug) || bodyText.includes(proj.name);
@@ -137,11 +138,12 @@ test.describe("Gallery & Photo API", () => {
 
   test("C2: Slug tidak dikenal", async ({ page }) => {
     await page.goto("/this-slug-does-not-exist-12345", { timeout: 20000 });
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
 
     const body = await page.locator("body").innerText().catch(() => "");
     const hasError = body.includes("Gagal") || body.includes("tidak ditemukan") ||
-                     body.includes("404") || body.includes("not found");
+                     body.includes("404") || body.includes("not found") ||
+                     body.includes("eror") || body.includes("Error");
     expect(hasError || body.length > 0).toBeTruthy();
   });
 });

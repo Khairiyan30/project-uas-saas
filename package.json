@@ -12,17 +12,24 @@
     "test:ui": "playwright test --ui",
     "test:chromium": "playwright test --project=chromium",
     "test:mobile": "playwright test --project=mobile",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "deck:generate": "python scripts/generate_pptx.py"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.65.0",
+    "@stripe/stripe-js": "^9.9.0",
     "@supabase/supabase-js": "^2.49.8",
+    "@vercel/analytics": "^2.0.1",
+    "archiver": "^8.0.0",
     "next": "^15.3.4",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "stripe": "^22.3.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.1.8",
+    "@types/archiver": "^8.0.0",
     "@types/node": "^22.15.3",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",

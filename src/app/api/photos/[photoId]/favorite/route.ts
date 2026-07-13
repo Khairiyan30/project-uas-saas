@@ -1,26 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase";
+import { verifySession, unauthorizedResponse } from "@/lib/session";
+import { canAccessProject } from "@/lib/authz";
 
 /**
  * PATCH /api/photos/[photoId]/favorite
  *
- * Toggle status favorit sebuah foto. Endpoint publik (klien tanpa login
- * bisa mengaksesnya sesuai requirement PRD).
+ * Toggle status favorit sebuah foto.
+ * Hanya owner atau assigned client yang bisa toggle.
  *
- * Menggunakan RPC function `toggle_favorite(photo_id, value)` yang
- * didefinisikan di migration SQL. Ini lebih aman daripada memberi
- * izin UPDATE langsung ke publik.
- *
- * Body: { is_favorite?: boolean }  — jika tidak dikirim, otomatis toggle.
+ * Body: { is_favorite?: boolean } — jika tidak dikirim, otomatis toggle.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ photoId: string }> }
 ) {
   try {
+    const authHeader = request.headers.get("Authorization");
+    const { user } = await verifySession(authHeader).catch(() => {
+      throw new Error("unauthorized");
+    });
+
     const { photoId } = await params;
 
-    // Validasi format UUID
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(photoId)) {
@@ -32,10 +34,10 @@ export async function PATCH(
 
     const supabase = createSupabaseServerClient();
 
-    // Ambil status saat ini
+    // Ambil info foto + project_id
     const { data: current, error: fetchError } = await supabase
       .from("photos")
-      .select("id, is_favorite")
+      .select("id, project_id, is_favorite")
       .eq("id", photoId)
       .single();
 
@@ -46,7 +48,15 @@ export async function PATCH(
       );
     }
 
-    // Tentukan status baru — dari body atau toggle
+    // Check akses: owner atau assigned client
+    const access = await canAccessProject(supabase, current.project_id, user.id);
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: "Anda tidak memiliki akses ke foto ini" },
+        { status: 403 }
+      );
+    }
+
     let newStatus: boolean = !current.is_favorite;
     try {
       const body = await request.json();
@@ -54,10 +64,9 @@ export async function PATCH(
         newStatus = body.is_favorite;
       }
     } catch {
-      // Body kosong / tidak valid → pakai toggle
+      // Body kosong → toggle
     }
 
-    // Gunakan RPC toggle_favorite yang lebih aman
     const { error: updateError } = await supabase.rpc("toggle_favorite", {
       photo_id: photoId,
       value: newStatus,
@@ -75,7 +84,8 @@ export async function PATCH(
       { photo: { id: photoId, is_favorite: newStatus } },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "unauthorized") return unauthorizedResponse();
     console.error("Unexpected error toggling favorite:", error);
     return NextResponse.json(
       { error: "Terjadi kesalahan server" },

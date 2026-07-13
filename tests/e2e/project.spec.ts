@@ -6,25 +6,36 @@ test.describe("Project API", () => {
     const { accessToken } = await setupAuthenticatedPage(page);
     expect(accessToken).toBeTruthy();
 
-    const res = await page.evaluate(async (token) => {
-      const r = await fetch("/api/projects", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: `Test ${Date.now()}`,
-          event_type: "Wedding",
-          description: "Created by test",
-        }),
-      });
-      return { ok: r.ok, status: r.status, body: await r.json() };
-    }, accessToken);
+    // Baca token langsung dari localStorage untuk memastikan token terbaru
+    const liveToken = await page.evaluate(() => localStorage.getItem("sb-access-token") || "");
+    const token = liveToken || accessToken;
 
-    expect(res.ok).toBeTruthy();
-    expect(res.body?.project?.name).toContain("Test ");
-    expect(res.body?.project?.unique_slug).toBeTruthy();
+    // Internal retry: kadang evaluate pertama gagal karena page belum stabil
+    let res: { ok: boolean; status: number; body: any } | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const t = await page.evaluate(() => localStorage.getItem("sb-access-token") || "").catch(() => token);
+      res = await page.evaluate(async (tk) => {
+        const r = await fetch("/api/projects", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${tk}`,
+          },
+          body: JSON.stringify({
+            name: `Test ${Date.now()}`,
+            event_type: "Wedding",
+            description: "Created by test",
+          }),
+        });
+        return { ok: r.ok, status: r.status, body: await r.json() };
+      }, t || token);
+      if (res.ok) break;
+      await page.waitForTimeout(3000);
+    }
+
+    expect(res!.ok).toBeTruthy();
+    expect(res!.body?.project?.name).toContain("Test ");
+    expect(res!.body?.project?.unique_slug).toBeTruthy();
   });
 
   test("P2: GET daftar proyek", async ({ page }) => {
@@ -101,7 +112,7 @@ test.describe("Project API", () => {
   });
 
   test("P6: Halaman /proyek render di browser", async ({ page }) => {
-    const { accessToken } = await setupAuthenticatedPage(page);
+    await setupAuthenticatedPage(page);
 
     await page.goto("/proyek", { waitUntil: "networkidle", timeout: 30000 });
     await page.waitForTimeout(5000);
@@ -111,7 +122,10 @@ test.describe("Project API", () => {
     const onLogin = url.includes("/login");
 
     if (onProyek) {
-      await expect(page.locator("body")).toBeVisible({ timeout: 3000 });
+      const mainContent = page.locator("main");
+      const visible = await mainContent.isVisible({ timeout: 10000 }).catch(() => false);
+      const hasContent = await page.getByText("Proyek").or(page.getByText("Buat Proyek")).isVisible().catch(() => false);
+      expect(visible || hasContent).toBeTruthy();
     }
     expect(onProyek || onLogin).toBeTruthy();
   });

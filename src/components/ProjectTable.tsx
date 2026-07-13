@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { Project } from "@/lib/types";
 
 interface ProjectTableProps {
   projects: Project[];
+  onDelete?: (projectId: string) => void;
 }
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -20,9 +22,11 @@ function getStatusBadge(status: string) {
   return STATUS_BADGE[status] || { label: status, className: "bg-gray-50 text-gray-600 border-gray-200" };
 }
 
-export function ProjectTable({ projects }: ProjectTableProps) {
+export function ProjectTable({ projects, onDelete }: ProjectTableProps) {
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+    <><div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
       <table className="w-full">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -129,13 +133,23 @@ export function ProjectTable({ projects }: ProjectTableProps) {
 
                 {/* Aksi */}
                 <td className="px-5 py-4 text-center">
-                  <Link
-                    href={`/${project.unique_slug}`}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-[#65195E] hover:text-white"
-                    title="Buka proyek"
-                  >
-                    <i className="ri-arrow-right-line text-base" />
-                  </Link>
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(project)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                      title="Hapus proyek"
+                    >
+                      <i className="ri-delete-bin-line text-base" />
+                    </button>
+                    <Link
+                      href={`/${project.unique_slug}`}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-[#65195E] hover:text-white"
+                      title="Buka proyek"
+                    >
+                      <i className="ri-arrow-right-line text-base" />
+                    </Link>
+                  </div>
                 </td>
               </tr>
             );
@@ -143,5 +157,42 @@ export function ProjectTable({ projects }: ProjectTableProps) {
         </tbody>
       </table>
     </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteTarget && onDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-fadeIn">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50">
+                <i className="ri-delete-bin-6-line text-lg text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Hapus Proyek</h3>
+                <p className="text-xs text-gray-400">Tindakan ini tidak bisa dibatalkan.</p>
+              </div>
+            </div>
+            <p className="mb-5 text-sm text-gray-600">
+              Apakah Anda yakin ingin menghapus <strong>{deleteTarget.name}</strong>? Semua foto dan data terkait akan dihapus permanen.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => { onDelete(deleteTarget.id); setDeleteTarget(null); }}
+                className="flex-1 rounded-lg bg-red-500 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+  </>
   );
 }

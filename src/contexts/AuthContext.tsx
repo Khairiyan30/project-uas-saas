@@ -2,13 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-
-interface UserProfile {
-  id: string;
-  email: string;
-  fullName: string;
-  avatarUrl: string | null;
-}
+import type { UserProfile } from "@/lib/types";
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -89,6 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: data.user.email,
           fullName: data.user.full_name || data.user.email,
           avatarUrl: data.user.avatar_url,
+          role: data.user.role || "photographer",
+          plan: data.user.plan || "free",
         });
         return true;
       }

@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Project } from "@/lib/types";
 
 interface ProjectCardProps {
   project: Project;
+  onDelete?: (projectId: string) => void;
 }
 
 // Mapping progress_status ke badge label + warna soft
@@ -52,9 +54,10 @@ function getProgressColor(percent: number | undefined): string {
   return "bg-gray-300";
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const badge = getStatusBadge(project.progress_status);
   const progressColor = getProgressColor(project.progress_percent);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   return (
     <div className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-lg">
@@ -126,36 +129,86 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </div>
         </div>
 
-        {/* Bottom stats + action */}
-        <div className="mt-4 flex items-center justify-between border-t border-gray-50 pt-4">
-          <div className="flex items-center gap-3">
-            {/* Foto count */}
-            <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
-              <i className="ri-camera-4-line text-sm" />
-              <span className="text-[10px] font-semibold">{project.photo_count}</span>
+          {/* Bottom stats + action */}
+          <div className="mt-4 flex items-center justify-between border-t border-gray-50 pt-4">
+            <div className="flex items-center gap-3">
+              {/* Foto count */}
+              <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
+                <i className="ri-camera-4-line text-sm" />
+                <span className="text-[10px] font-semibold">{project.photo_count}</span>
+              </div>
+              {/* Favorite count */}
+              <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
+                <i className="ri-heart-fill text-sm" />
+                <span className="text-[10px] font-semibold">{project.favorite_count}</span>
+              </div>
+              {/* Revision count */}
+              <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
+                <i className="ri-refresh-line text-sm" />
+                <span className="text-[10px] font-semibold">{project.revision_count}</span>
+              </div>
             </div>
-            {/* Favorite count */}
-            <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
-              <i className="ri-heart-fill text-sm" />
-              <span className="text-[10px] font-semibold">{project.favorite_count}</span>
-            </div>
-            {/* Revision count */}
-            <div className="flex items-center gap-1 text-gray-400 transition-colors duration-200 group-hover:text-gray-500">
-              <i className="ri-refresh-line text-sm" />
-              <span className="text-[10px] font-semibold">{project.revision_count}</span>
+
+            <div className="flex items-center gap-1">
+              {/* Delete button */}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setShowDeleteConfirm(true); }}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-400 transition-all duration-300 hover:bg-red-50 hover:text-red-500 hover:scale-110 active:scale-95"
+                  title="Hapus proyek"
+                >
+                  <i className="ri-delete-bin-line text-base" />
+                </button>
+              )}
+
+              {/* Detail link */}
+              <Link
+                href={`/${project.unique_slug}`}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-400 transition-all duration-300 hover:bg-[#65195E] hover:text-white hover:scale-110 active:scale-95"
+                title="Lihat detail proyek"
+              >
+                <i className="ri-arrow-right-line text-base" />
+              </Link>
             </div>
           </div>
-
-          {/* Detail link */}
-          <Link
-            href={`/${project.unique_slug}`}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-50 text-gray-400 transition-all duration-300 hover:bg-[#65195E] hover:text-white hover:scale-110 active:scale-95"
-            title="Lihat detail proyek"
-          >
-            <i className="ri-arrow-right-line text-base" />
-          </Link>
         </div>
-      </div>
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && onDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-fadeIn">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50">
+                  <i className="ri-delete-bin-6-line text-lg text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Hapus Proyek</h3>
+                  <p className="text-xs text-gray-400">Tindakan ini tidak bisa dibatalkan.</p>
+                </div>
+              </div>
+              <p className="mb-5 text-sm text-gray-600">
+                Apakah Anda yakin ingin menghapus <strong>{project.name}</strong>? Semua foto dan data terkait akan dihapus permanen.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { onDelete(project.id); setShowDeleteConfirm(false); }}
+                  className="flex-1 rounded-lg bg-red-500 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
+                >
+                  Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

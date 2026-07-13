@@ -21,14 +21,21 @@ test.describe("Mobile Responsiveness", () => {
 
   test("M3: Dashboard mobile — statistik card", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    const { accessToken } = await setupAuthenticatedPage(page);
+    await setupAuthenticatedPage(page);
 
-    await page.goto("/dashboard", { waitUntil: "networkidle", timeout: 30000 });
-    await page.waitForTimeout(5000);
-
-    const url = page.url();
-    if (url.includes("/dashboard")) {
-      await expect(page.locator("body")).toBeVisible({ timeout: 3000 });
+    // Cek bahwa halaman dashboard termuat
+    const onDashboard = await page.waitForURL(/\/dashboard/, { timeout: 20000 })
+      .then(() => true)
+      .catch(() => false);
+    if (onDashboard) {
+      // Cari statistik card atau konten utama
+      const mainContent = page.locator("main");
+      const visible = await mainContent.isVisible({ timeout: 10000 }).catch(() => false);
+      const hasStats = await page.getByText("Total Proyek").isVisible().catch(() => false);
+      expect(visible || hasStats).toBeTruthy();
+    } else {
+      // Fallback: check what page we're on
+      expect(page.url()).toContain("/login");
     }
   });
 });

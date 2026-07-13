@@ -1,0 +1,211 @@
+"use client";
+
+import Link from "next/link";
+import { ClientSidebar } from "@/components/ClientSidebar";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProjects, enrichProject } from "@/hooks/useProjects";
+import { useState, useEffect, useCallback } from "react";
+import type { Project } from "@/lib/types";
+
+export default function ClientDashboardPage() {
+  const isAuthed = useRequireAuth();
+  const { user } = useAuth();
+  const { projects, setProjects, loading } = useProjects(isAuthed);
+
+  const totalProjects = projects.length;
+  const activeProjects = projects.filter(
+    (p) => p.progress_status !== "Selesai"
+  ).length;
+  const totalPhotos = projects.reduce((sum, p) => sum + p.photo_count, 0);
+  const totalFavorites = projects.reduce((sum, p) => sum + p.favorite_count, 0);
+
+  if (!isAuthed) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+        <p className="text-sm text-gray-400">Memeriksa sesi…</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#F8F8F8]">
+      <ClientSidebar />
+
+      <div className="lg:ml-64 min-h-screen">
+        <div className="mx-auto max-w-6xl px-4 py-4 pt-16 sm:px-8 sm:py-8 sm:pt-8">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+              Halo, {user?.fullName?.split(" ")[0] || "Klien"}
+            </h2>
+            <p className="mt-1 text-sm text-gray-400">
+              Pantau progres proyek fotografi Anda di sini.
+            </p>
+          </div>
+
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="group rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F8F8F8] text-[#65195E] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                  <i className="ri-folder-line text-xl"></i>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-400">Total Proyek</p>
+                  {loading ? (
+                    <div className="h-7 w-12 animate-pulse rounded bg-gray-100 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#65195E]">{totalProjects}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="group rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F8F8F8] text-[#91157E] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                  <i className="ri-time-line text-xl"></i>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-400">Proyek Aktif</p>
+                  {loading ? (
+                    <div className="h-7 w-12 animate-pulse rounded bg-gray-100 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#91157E]">{activeProjects}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="group rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F8F8F8] text-[#91157E] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                  <div className="h-6 w-6 bg-current" style={{ maskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Media/camera-4-line.svg)', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskImage: 'url(https://cdn.jsdelivr.net/npm/remixicon@4.9.1/icons/Media/camera-4-line.svg)', WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center' }} />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-400">Total Foto</p>
+                  {loading ? (
+                    <div className="h-7 w-12 animate-pulse rounded bg-gray-100 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#91157E]">{totalPhotos}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="group rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-gray-200 hover:shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F8F8F8] text-[#C246C6] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                  <i className="ri-heart-fill text-xl"></i>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-400">Foto Favorit</p>
+                  {loading ? (
+                    <div className="h-7 w-12 animate-pulse rounded bg-gray-100 mt-1" />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 transition-colors group-hover:text-[#C246C6]">{totalFavorites}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md sm:p-8">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">
+                  Proyek Saya
+                </h3>
+                <p className="mt-0.5 text-xs text-gray-400">
+                  Proyek yang telah dibagikan fotografer kepada Anda.
+                </p>
+              </div>
+              <Link
+                href="/client/projects"
+                className="group inline-flex items-center gap-1 rounded-full bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-500 transition-all hover:bg-gray-100 hover:text-gray-900"
+              >
+                Lihat Semua
+                <span className="transition-transform duration-300 group-hover:translate-x-0.5">→</span>
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div key={i} className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3">
+                    <div className="flex items-center gap-4">
+                      <div className="h-11 w-11 animate-pulse rounded-lg bg-gray-100" />
+                      <div>
+                        <div className="h-4 w-32 animate-pulse rounded bg-gray-100" />
+                        <div className="h-3 w-20 animate-pulse rounded bg-gray-100 mt-1.5" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="h-6 w-24 animate-pulse rounded bg-gray-100" />
+                      <div className="h-6 w-16 animate-pulse rounded bg-gray-100" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                  <i className="ri-folder-line text-2xl"></i>
+                </div>
+                <p className="text-sm font-medium text-gray-900">Belum ada proyek</p>
+                <p className="mt-1 text-xs text-gray-400">
+                  Fotografer akan membagikan proyek kepada Anda melalui undangan email.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {projects.map((project, idx) => (
+                  <div
+                    key={project.id}
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                    className="group flex items-center justify-between rounded-xl border border-gray-50 bg-gray-50/50 px-4 py-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-200 hover:bg-white hover:shadow-md animate-fadeIn"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 transition-transform duration-300 group-hover:scale-110">
+                        <i className="ri-image-line text-xl"></i>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 transition-colors group-hover:text-black">
+                          {project.name}
+                        </p>
+                        <p className="text-xs text-gray-400">{project.event_type}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-32">
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-[10px] font-medium text-gray-400">Progress</span>
+                          <span className="text-[10px] font-bold text-gray-500">{project.progress_percent}%</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                          <div
+                            className="h-full rounded-full bg-[#91157E] transition-all duration-700"
+                            style={{ width: `${project.progress_percent}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-semibold text-gray-600 transition-colors group-hover:bg-gray-200">
+                        {project.progress_status}
+                      </span>
+                      <Link
+                        href={`/${project.unique_slug}`}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-all duration-300 hover:bg-[#65195E] hover:text-white hover:scale-110 active:scale-95"
+                        title="Buka proyek"
+                      >
+                        <i className="ri-arrow-right-line text-base"></i>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}

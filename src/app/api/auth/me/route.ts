@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     let { data: profile, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, avatar_url, created_at")
+        .select("id, email, full_name, avatar_url, role, created_at")
       .eq("id", user.id)
       .single();
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
           full_name: fallbackName,
           avatar_url: null,
         })
-        .select("id, email, full_name, avatar_url, created_at")
+      .select("id, email, full_name, avatar_url, role, created_at")
         .single();
 
       if (insertError) {
@@ -85,7 +85,24 @@ export async function GET(request: NextRequest) {
       profile = newProfile;
     }
 
-    return NextResponse.json({ user: profile }, { status: 200 });
+    // Ambil data subscription
+    let plan = "free";
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("plan, status")
+      .eq("user_id", user.id)
+      .single();
+
+    if (sub && sub.status === "active") {
+      plan = sub.plan;
+    }
+
+    return NextResponse.json({
+      user: {
+        ...profile,
+        plan,
+      },
+    }, { status: 200 });
   } catch (error: any) {
     console.error("Error fetching profile:", error);
     return NextResponse.json(

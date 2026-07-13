@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { verifySession, unauthorizedResponse } from "@/lib/session";
+import { canAccessProject } from "@/lib/authz";
 
 /**
  * GET /api/projects/[id]
  *
  * Mengambil detail proyek termasuk unique_slug untuk galeri publik.
+ * Akses: Owner atau assigned client (accepted).
  */
 export async function GET(
   request: NextRequest,
@@ -19,7 +21,6 @@ export async function GET(
 
     const { id } = await params;
 
-    // Validasi format UUID
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
@@ -31,38 +32,30 @@ export async function GET(
 
     const supabase = createSupabaseServerClient();
 
-    const { data: project, error } = await supabase
-      .from("projects")
-      .select(
-        "id, user_id, name, event_type, description, progress_status, unique_slug, created_at, cover_photo_url"
-      )
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      console.error("Error fetching project:", error);
-      return NextResponse.json(
-        { error: "Gagal mengambil detail proyek" },
-        { status: 500 }
-      );
-    }
-
-    if (!project) {
-      return NextResponse.json(
-        { error: "Proyek tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-
-    // Pastikan user yang login adalah pemilik proyek
-    if (project.user_id !== user.id) {
+    const access = await canAccessProject(supabase, id, user.id);
+    if (!access.allowed) {
       return NextResponse.json(
         { error: "Anda tidak memiliki akses ke proyek ini" },
         { status: 403 }
       );
     }
 
-    return NextResponse.json({ project }, { status: 200 });
+    // Ambil aggregate counts
+    const { data: allPhotos } = await supabase
+      .from("photos")
+      .select("is_favorite")
+      .eq("project_id", id);
+
+    const photoCount = allPhotos?.length ?? 0;
+    const favoriteCount = allPhotos?.filter((p) => p.is_favorite).length ?? 0;
+
+    const result = {
+      ...access.project,
+      photo_count: photoCount,
+      favorite_count: favoriteCount,
+    };
+
+    return NextResponse.json({ project: result, isOwner: access.isOwner, isClient: access.isClient }, { status: 200 });
   } catch (error: any) {
     if (error.message === "unauthorized") return unauthorizedResponse();
     console.error("Unexpected error fetching project:", error);

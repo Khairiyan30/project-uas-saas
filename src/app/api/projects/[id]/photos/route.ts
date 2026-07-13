@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase";
 import { verifySession, unauthorizedResponse } from "@/lib/session";
+import { canAccessProject } from "@/lib/authz";
 
 /**
  * GET /api/projects/[id]/photos
  * Mengambil daftar foto untuk sebuah proyek tertentu.
+ * Akses: Owner atau assigned client (accepted).
  */
 export async function GET(
   request: NextRequest,
@@ -18,7 +20,6 @@ export async function GET(
 
     const { id } = await params;
 
-    // Validasi format UUID
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
@@ -30,34 +31,32 @@ export async function GET(
 
     const supabase = createSupabaseServerClient();
 
-    // Verifikasi kepemilikan proyek
-    const { data: project, error: projectError } = await supabase
-      .from("projects")
-      .select("id, user_id")
-      .eq("id", id)
-      .single();
-
-    if (projectError || !project) {
-      return NextResponse.json(
-        { error: "Proyek tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-
-    if (project.user_id !== user.id) {
+    const access = await canAccessProject(supabase, id, user.id);
+    if (!access.allowed) {
       return NextResponse.json(
         { error: "Anda tidak memiliki akses ke proyek ini" },
         { status: 403 }
       );
     }
 
-    const { data: photos, error } = await supabase
+    let { data: photos, error } = await supabase
       .from("photos")
       .select(
-        "id, project_id, url_original, url_edited, filename, is_favorite, created_at"
+        "id, project_id, url_original, url_edited, filename, is_favorite, status, created_at"
       )
       .eq("project_id", id)
       .order("created_at", { ascending: true });
+
+    if (error && error.code === "42703") {
+      // Kolom status belum ada — fallback
+      const fallback = await supabase
+        .from("photos")
+        .select("id, project_id, url_original, url_edited, filename, is_favorite, created_at")
+        .eq("project_id", id)
+        .order("created_at", { ascending: true });
+      photos = fallback.data?.map(p => ({ ...p, status: "pending" })) ?? [];
+      error = fallback.error;
+    }
 
     if (error) {
       console.error("Error fetching photos:", error);

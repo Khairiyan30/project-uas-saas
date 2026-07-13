@@ -58,6 +58,20 @@ export async function POST(request: NextRequest) {
 
     const { session, user } = data;
 
+    let role: string = "photographer";
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.role) {
+        role = profile.role;
+      }
+    }
+
     return NextResponse.json(
       {
         message: "Login berhasil",
@@ -69,6 +83,7 @@ export async function POST(request: NextRequest) {
         user: {
           id: user.id,
           email: user.email,
+          role,
         },
       },
       { status: 200 }
